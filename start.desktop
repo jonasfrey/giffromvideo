@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Web App
+Comment=Start the web application and open browser
+Exec=/home/jonas/code/giffromvideo/start.sh
+Path=/home/jonas/code/giffromvideo
+Icon=web-browser
+Terminal=false
+Categories=Development;
+StartupNotify=true

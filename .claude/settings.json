@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"keyvalpair\" /home/legion5pro/code/browser_crud_app_template/serverside/testing/*.js)"
+    ]
+  }
+}
