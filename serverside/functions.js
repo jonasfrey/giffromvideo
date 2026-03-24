@@ -211,7 +211,7 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         a_s_filter_scaled.push(`[v${n_idx}]`);
     }
 
-    let n_bytes__max = 25 * 1024 * 1024; // 25 MB
+    let n_bytes__max = 20 * 1024 * 1024; // 20 MB
     let a_n_fps = [15, 12, 10, 8, 6, 4];
     let n_bytes__result = 0;
     let n_fps__used = a_n_fps[0];
