@@ -211,35 +211,53 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         a_s_filter_scaled.push(`[v${n_idx}]`);
     }
 
-    let s_concat = a_s_filter_scaled.join('') + `concat=n=${a_o_section.length}:v=1:a=0,split[s0][s1];[s0]palettegen=max_colors=256:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5`;
-    let s_filter_complex = a_s_filter_input.join(';') + ';' + s_concat;
+    let n_bytes__max = 25 * 1024 * 1024; // 25 MB
+    let a_n_fps = [15, 12, 10, 8, 6, 4];
+    let n_bytes__result = 0;
+    let n_fps__used = a_n_fps[0];
 
-    let a_s_arg = [
-        '-y',
-        '-i', s_path_video,
-        '-filter_complex', s_filter_complex,
-        '-f', 'gif',
-        s_path_output
-    ];
+    for(let n_attempt = 0; n_attempt < a_n_fps.length; n_attempt++){
+        let n_fps = a_n_fps[n_attempt];
+        n_fps__used = n_fps;
+        let s_fps_filter = `,fps=${n_fps}`;
+        let s_concat = a_s_filter_scaled.join('') + `concat=n=${a_o_section.length}:v=1:a=0${s_fps_filter},split[s0][s1];[s0]palettegen=max_colors=256:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5`;
+        let s_filter_complex = a_s_filter_input.join(';') + ';' + s_concat;
 
-    console.log('ffmpeg args:', a_s_arg.join(' '));
+        let a_s_arg = [
+            '-y',
+            '-i', s_path_video,
+            '-filter_complex', s_filter_complex,
+            '-f', 'gif',
+            s_path_output
+        ];
 
-    let o_command = new Deno.Command('ffmpeg', {
-        args: a_s_arg,
-        stdout: 'piped',
-        stderr: 'piped',
-    });
-    let o_process = await o_command.output();
-    let s_stderr = new TextDecoder().decode(o_process.stderr);
+        console.log(`ffmpeg attempt ${n_attempt + 1} (fps=${n_fps}):`, a_s_arg.join(' '));
 
-    if(!o_process.success){
-        throw new Error('ffmpeg failed: ' + s_stderr);
+        let o_command = new Deno.Command('ffmpeg', {
+            args: a_s_arg,
+            stdout: 'piped',
+            stderr: 'piped',
+        });
+        let o_process = await o_command.output();
+        let s_stderr = new TextDecoder().decode(o_process.stderr);
+
+        if(!o_process.success){
+            throw new Error('ffmpeg failed: ' + s_stderr);
+        }
+
+        let o_stat = await Deno.stat(s_path_output);
+        n_bytes__result = o_stat.size;
+
+        if(n_bytes__result <= n_bytes__max){
+            break;
+        }
+        console.log(`GIF too large: ${Math.round(n_bytes__result / 1024 / 1024)}MB > 25MB, retrying with lower fps...`);
     }
 
-    let o_stat = await Deno.stat(s_path_output);
     return {
         s_path_output,
-        n_bytes: o_stat.size,
+        n_bytes: n_bytes__result,
+        n_fps: n_fps__used,
         s_status: 'complete',
     };
 };

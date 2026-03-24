@@ -688,11 +688,13 @@ let o_component__videocutter = {
                     throw new Error(o_resp.s_error);
                 }
                 let v_result = o_resp.v_result;
+                let n_mb = (v_result.n_bytes / 1024 / 1024).toFixed(1);
+                let s_msg = 'GIF exported: ' + v_result.s_path_output + ' (' + n_mb + ' MB, ' + v_result.n_fps + ' fps)';
+                if(v_result.n_bytes > 25 * 1024 * 1024){
+                    s_msg += ' — WARNING: still over 25 MB, try smaller crop or shorter sections';
+                }
                 o_state.a_o_logmsg.push(
-                    f_o_logmsg(
-                        'GIF exported: ' + v_result.s_path_output + ' (' + Math.round(v_result.n_bytes / 1024) + ' KB)',
-                        false, true, s_o_logmsg_s_type__info, Date.now(), 15000
-                    )
+                    f_o_logmsg(s_msg, false, true, v_result.n_bytes > 25 * 1024 * 1024 ? s_o_logmsg_s_type__error : s_o_logmsg_s_type__info, Date.now(), 15000)
                 );
             } catch(o_err) {
                 o_state.a_o_logmsg.push(
