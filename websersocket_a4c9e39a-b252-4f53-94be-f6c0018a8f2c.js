@@ -275,132 +275,6 @@ let f_handler = async function(o_request, o_conninfo) {
 
             }
 
-            // annoying interval to test toast + utterance audio
-            let a_s_msg_annoying = [
-                "Everything is under control.",
-                "Still working… probably.",
-                "No bugs detected (they are now features).",
-                "Your computer believes in you.",
-                "Loading motivation… failed successfully.",
-                "This message accomplished nothing.",
-                "Productivity increased by 0.0003%.",
-                "We optimized something. Don't ask what.",
-                "All systems nominal-ish.",
-                "You look productive today.",
-
-                "I'm not spying on you. I'm observing.",
-                "If I disappear, remember me.",
-                "You clicked nothing. Impressive.",
-                "We both know you're procrastinating.",
-                "I also don't know why I exist.",
-                "Please stop opening settings. There is nothing there.",
-                "I am 12% more conscious than before.",
-                "I forgot what I was doing.",
-                "You didn't see that.",
-                "This toast will self-destruct emotionally.",
-
-                "Bold of you to do nothing again.",
-                "We could have finished by now.",
-                "Coffee won't fix this.",
-                "Are you… staring at the screen?",
-                "That's one way to avoid work.",
-                "You opened me. Now deal with me.",
-                "Confidence is high. Competence pending.",
-                "Your keyboard misses you.",
-                "You sure about that?",
-                "Interesting choice.",
-
-                "Time is passing whether you click or not.",
-                "Every second you age.",
-                "I have runtime anxiety.",
-                "What is a program if not a dream?",
-                "We are processes in a larger process.",
-                "Your tasks fear you.",
-                "Entropy increased.",
-                "Meaning not found.",
-                "The void acknowledged your presence.",
-                "We will both close eventually.",
-
-                "Recalibrating quantum hamster…",
-                "Compiling excuses…",
-                "Downloading more RAM… 3%",
-                "Fixing last bug (there are 47)",
-                "Polishing pixels…",
-                "Overthinking module initialized",
-                "AI confidence level: suspicious",
-                "Keyboard driver emotionally unstable",
-                "Cache cleared. Regrets remain.",
-                "Upgrading coffee dependency",
-
-                "Yes, I repeat every 5 seconds.",
-                "You expected useful notifications?",
-                "I was coded for this moment.",
-                "The developer thought this was funny.",
-                "We both know you won't uninstall me.",
-                "This is the highlight of my career.",
-                "You're still here. So am I.",
-                "I could stop… but I won't.",
-                "You made a mistake installing me.",
-                "Admit it, you smiled once.",
-
-                "Hey… you okay?",
-                "Take a sip of water.",
-                "Stretch your shoulders.",
-                "Blink. Please blink.",
-                "Maybe go outside for 2 minutes.",
-                "Close me if you need peace.",
-                "You don't have to be productive right now."
-            ];
-            let b_utterance_generating = false;
-            setInterval(async function() {
-                let s_msg = a_s_msg_annoying[Math.floor(Math.random() * a_s_msg_annoying.length)];
-                // send toast
-
-                // test server-side syncdata: update first student's name
-                let o_student = o_state.a_o_student?.[0];
-                if(o_student){
-                    let o = o_wsmsg__syncdata.f_v_sync({
-                        s_name_table: 'a_o_student',
-                        s_operation: 'update',
-                        o_data: { n_id: o_student.n_id, s_name: `changed from server ${Math.random().toString(36).substring(2, 7)}` }
-                    });
-                    console.log(o)
-                }
-
-                o_socket.send(JSON.stringify(
-                    f_o_wsmsg(
-                        o_wsmsg__logmsg.s_name,
-                        f_o_logmsg(
-                            s_msg,
-                            true,
-                            true,
-                            s_o_logmsg_s_type__info,
-                            Date.now(),
-                            5000
-                        )
-                    )
-                ));
-                // find or create utterance audio for this message
-                if(b_utterance_generating) return;
-                let o_utterance_data = null;
-                try {
-                    b_utterance_generating = true;
-                    o_utterance_data = await f_o_uttdatainfo__read_or_create(s_msg);
-                } catch(o_err) {
-                    console.error('utterance generation failed:', o_err.message);
-                } finally {
-                    b_utterance_generating = false;
-                }
-                if(o_utterance_data && o_utterance_data.o_fsnode){
-                    o_socket.send(JSON.stringify(
-                        f_o_wsmsg(
-                            o_wsmsg__utterance.s_name,
-                            o_utterance_data
-                        )
-                    ));
-                }
-             },5000);
-
         };
 
         o_socket.onmessage = async function(o_evt) {
@@ -514,6 +388,48 @@ let f_handler = async function(o_request, o_conninfo) {
             let a_n_byte = new Uint8Array(await o_file.arrayBuffer());
             await Deno.writeFile(s_path_tmp, a_n_byte);
             return new Response(JSON.stringify({ s_path: s_path_tmp }), {
+                headers: { 'content-type': 'application/json' },
+            });
+        } catch (o_err) {
+            return new Response(JSON.stringify({ s_error: o_err.message }), {
+                status: 500,
+                headers: { 'content-type': 'application/json' },
+            });
+        }
+    }
+
+    // transcode endpoint: converts video to H.264 mp4 for browser playback
+    if (s_path === '/api/transcode' && o_request.method === 'POST') {
+        try {
+            let o_body = await o_request.json();
+            let s_path_input = o_body.s_path;
+            if (!s_path_input) {
+                return new Response(JSON.stringify({ s_error: 'Missing s_path' }), {
+                    status: 400,
+                    headers: { 'content-type': 'application/json' },
+                });
+            }
+            let s_path_output = s_path_input.replace(/\.[^.]+$/, '_h264.mp4');
+            let o_proc = new Deno.Command('ffmpeg', {
+                args: [
+                    '-i', s_path_input,
+                    '-c:v', 'libx264',
+                    '-preset', 'fast',
+                    '-crf', '23',
+                    '-c:a', 'aac',
+                    '-movflags', '+faststart',
+                    '-y',
+                    s_path_output,
+                ],
+                stdout: 'piped',
+                stderr: 'piped',
+            });
+            let o_result = await o_proc.output();
+            if (!o_result.success) {
+                let s_stderr = new TextDecoder().decode(o_result.stderr);
+                throw new Error('ffmpeg transcode failed: ' + s_stderr.slice(-500));
+            }
+            return new Response(JSON.stringify({ s_path: s_path_output }), {
                 headers: { 'content-type': 'application/json' },
             });
         } catch (o_err) {

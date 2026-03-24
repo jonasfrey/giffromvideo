@@ -92,6 +92,12 @@ let o_component__videocutter = {
                                 'v-on:click': 'f_export_gif',
                                 innerText: "{{ b_exporting ? 'Exporting...' : 'Export GIF' }}",
                             },
+                            {
+                                s_tag: 'div',
+                                'v-if': 'b_transcoding',
+                                class: 'o_videocutter__status',
+                                innerText: 'Transcoding to H.264 for browser playback...',
+                            },
                         ],
                     },
                     // video player
@@ -105,6 +111,7 @@ let o_component__videocutter = {
                                 'v-on:loadedmetadata': 'f_on_loaded',
                                 'v-on:timeupdate': 'f_on_timeupdate',
                                 'v-on:ended': 'f_on_ended',
+                                'v-on:error': 'f_on_video_error',
                                 ':src': 's_url_video',
                             },
                         ],
@@ -214,6 +221,7 @@ let o_component__videocutter = {
             s_path_video: null,
             s_url_video: null,
             b_uploading: false,
+            b_transcoding: false,
             n_ms_current: 0,
             n_ms_duration: 0,
             b_playing: false,
@@ -272,17 +280,42 @@ let o_component__videocutter = {
         f_on_ended: function() {
             this.b_playing = false;
         },
+        f_on_video_error: async function() {
+            if(this.b_transcoding || !this.s_path_video) return;
+            this.b_transcoding = true;
+            o_state.a_o_logmsg.push(
+                f_o_logmsg('Video codec not supported by browser — transcoding with ffmpeg...', false, true, s_o_logmsg_s_type__info, Date.now(), 30000)
+            );
+            try {
+                let o_resp = await fetch('/api/transcode', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ s_path: this.s_path_video }),
+                });
+                let o_json = await o_resp.json();
+                if(o_json.s_error) throw new Error(o_json.s_error);
+                if(this.s_url_video) URL.revokeObjectURL(this.s_url_video);
+                this.s_url_video = '/api/file?path=' + encodeURIComponent(o_json.s_path);
+                o_state.a_o_logmsg.push(
+                    f_o_logmsg('Transcoding complete — video ready.', false, true, s_o_logmsg_s_type__info, Date.now(), 5000)
+                );
+            } catch(o_err) {
+                o_state.a_o_logmsg.push(
+                    f_o_logmsg('Transcode failed: ' + o_err.message, false, true, s_o_logmsg_s_type__error, Date.now(), 10000)
+                );
+            }
+            this.b_transcoding = false;
+        },
         f_toggle_play: async function() {
             let el_video = this.$refs.el_video;
             if(!el_video) return;
+            if(this.b_transcoding) return;
             if(el_video.paused){
                 try {
                     await el_video.play();
                     this.b_playing = true;
                 } catch(o_err) {
-                    o_state.a_o_logmsg.push(
-                        f_o_logmsg('Cannot play video: codec not supported by browser. Try MP4 (H.264) or WebM.', false, true, s_o_logmsg_s_type__error, Date.now(), 10000)
-                    );
+                    // transcode is handled by f_on_video_error
                 }
             } else {
                 el_video.pause();
