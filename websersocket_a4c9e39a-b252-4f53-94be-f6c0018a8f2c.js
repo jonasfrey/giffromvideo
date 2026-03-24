@@ -498,6 +498,32 @@ let f_handler = async function(o_request, o_conninfo) {
 
 
 
+    // upload endpoint: saves file to /tmp/ and returns server path for ffmpeg export
+    if (s_path === '/api/upload' && o_request.method === 'POST') {
+        try {
+            let o_formdata = await o_request.formData();
+            let o_file = o_formdata.get('file');
+            if (!o_file) {
+                return new Response(JSON.stringify({ s_error: 'No file provided' }), {
+                    status: 400,
+                    headers: { 'content-type': 'application/json' },
+                });
+            }
+            let s_name = o_file.name || 'video.mp4';
+            let s_path_tmp = `/tmp/giffromvideo_${Date.now()}_${s_name}`;
+            let a_n_byte = new Uint8Array(await o_file.arrayBuffer());
+            await Deno.writeFile(s_path_tmp, a_n_byte);
+            return new Response(JSON.stringify({ s_path: s_path_tmp }), {
+                headers: { 'content-type': 'application/json' },
+            });
+        } catch (o_err) {
+            return new Response(JSON.stringify({ s_error: o_err.message }), {
+                status: 500,
+                headers: { 'content-type': 'application/json' },
+            });
+        }
+    }
+
     // WARNING: this endpoint reads arbitrary absolute paths with no restrictions.
     // restrict to a safe base directory before exposing this server on a network.
     if (s_path === '/api/file') {

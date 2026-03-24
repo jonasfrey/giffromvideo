@@ -1,11 +1,9 @@
 // Copyright (C) [2026] [Jonas Immanuel Frey] - Licensed under GPLv2. See LICENSE file for details.
 
 import { f_o_html_from_o_js } from "./lib/handyhelpers.js";
-import { f_send_wsmsg_with_response, o_wsmsg__syncdata, o_state } from './index.js';
-import { f_s_path_parent } from './functions.js';
+import { f_send_wsmsg_with_response, o_state } from './index.js';
 import {
     f_o_wsmsg,
-    o_wsmsg__f_a_o_fsnode,
     o_wsmsg__export_gif,
     f_o_logmsg,
     s_o_logmsg_s_type__info,
@@ -41,42 +39,20 @@ let o_component__videocutter = {
                     },
                     {
                         s_tag: 'div',
-                        class: 'o_filebrowser__path_bar',
+                        class: 'o_videocutter__filepicker__input_wrap',
                         a_o: [
                             {
-                                s_tag: 'div',
-                                class: 'interactable',
-                                'v-on:click': 'f_navigate_up',
-                                innerText: '..',
+                                s_tag: 'input',
+                                type: 'file',
+                                accept: 'video/*',
+                                ref: 'el_input_file',
+                                'v-on:change': 'f_on_file_selected($event)',
                             },
                             {
                                 s_tag: 'div',
-                                class: 'o_filebrowser__path',
-                                innerText: '{{ s_path_browse }}',
-                            },
-                        ],
-                    },
-                    {
-                        s_tag: 'div',
-                        class: 'o_filebrowser__list',
-                        a_o: [
-                            {
-                                s_tag: 'div',
-                                'v-for': 'o_fsnode of a_o_fsnode',
-                                ':class': "'o_fsnode interactable'",
-                                'v-on:click': 'f_click_fsnode(o_fsnode)',
-                                a_o: [
-                                    {
-                                        s_tag: 'div',
-                                        class: 'o_fsnode__type',
-                                        innerText: "{{ o_fsnode.b_folder ? 'dir' : 'file' }}",
-                                    },
-                                    {
-                                        s_tag: 'div',
-                                        class: 'o_fsnode__name',
-                                        innerText: '{{ o_fsnode.s_name }}',
-                                    },
-                                ],
+                                'v-if': 'b_uploading',
+                                class: 'o_videocutter__filepicker__status',
+                                innerText: 'Uploading to server for export...',
                             },
                         ],
                     },
@@ -235,10 +211,9 @@ let o_component__videocutter = {
     })).outerHTML,
     data: function() {
         return {
-            s_path_browse: '/',
-            a_o_fsnode: [],
             s_path_video: null,
             s_url_video: null,
+            b_uploading: false,
             n_ms_current: 0,
             n_ms_duration: 0,
             b_playing: false,
@@ -250,43 +225,33 @@ let o_component__videocutter = {
     },
     methods: {
         f_s_time: f_s_time__from_n_ms,
-        // file browser
-        f_load_a_o_fsnode: async function() {
-            let o_resp = await f_send_wsmsg_with_response(
-                f_o_wsmsg(o_wsmsg__f_a_o_fsnode.s_name, [
-                    this.s_path_browse,
-                    false,
-                    false
-                ])
-            );
-            let a_o = o_resp.v_result || [];
-            // filter to folders and video files
-            let a_s_ext_video = ['.mp4', '.webm', '.mkv', '.avi', '.mov'];
-            this.a_o_fsnode = a_o.filter(function(o){
-                if(o.b_folder) return true;
-                let s_name = (o.s_name || '').toLowerCase();
-                return a_s_ext_video.some(function(s_ext){ return s_name.endsWith(s_ext); });
-            });
-        },
-        f_click_fsnode: async function(o_fsnode) {
-            if(o_fsnode.b_folder){
-                this.s_path_browse = o_fsnode.s_path_absolute;
-                await this.f_load_a_o_fsnode();
-            } else {
-                // selected a video file
-                this.s_path_video = o_fsnode.s_path_absolute;
-                this.s_url_video = '/api/file?path=' + encodeURIComponent(o_fsnode.s_path_absolute);
-                this.a_o_section = [];
-                this.o_section__pending = null;
+        // file picker
+        f_on_file_selected: async function(o_evt) {
+            let o_file = o_evt.target.files[0];
+            if(!o_file) return;
+            // object URL for immediate playback
+            this.s_url_video = URL.createObjectURL(o_file);
+            this.a_o_section = [];
+            this.o_section__pending = null;
+            // upload to server so ffmpeg can access it for export
+            this.b_uploading = true;
+            try {
+                let o_formdata = new FormData();
+                o_formdata.append('file', o_file);
+                let o_resp = await fetch('/api/upload', { method: 'POST', body: o_formdata });
+                let o_json = await o_resp.json();
+                if(o_json.s_error) throw new Error(o_json.s_error);
+                this.s_path_video = o_json.s_path;
+            } catch(o_err) {
+                o_state.a_o_logmsg.push(
+                    f_o_logmsg('Upload failed: ' + o_err.message, false, true, s_o_logmsg_s_type__error, Date.now(), 10000)
+                );
+                this.s_url_video = null;
             }
-        },
-        f_navigate_up: async function() {
-            let s_path_parent = f_s_path_parent(this.s_path_browse, '/');
-            if(s_path_parent === this.s_path_browse) return;
-            this.s_path_browse = s_path_parent;
-            await this.f_load_a_o_fsnode();
+            this.b_uploading = false;
         },
         f_clear_video: function() {
+            if(this.s_url_video) URL.revokeObjectURL(this.s_url_video);
             this.s_path_video = null;
             this.s_url_video = null;
             this.a_o_section = [];
@@ -307,12 +272,18 @@ let o_component__videocutter = {
         f_on_ended: function() {
             this.b_playing = false;
         },
-        f_toggle_play: function() {
+        f_toggle_play: async function() {
             let el_video = this.$refs.el_video;
             if(!el_video) return;
             if(el_video.paused){
-                el_video.play();
-                this.b_playing = true;
+                try {
+                    await el_video.play();
+                    this.b_playing = true;
+                } catch(o_err) {
+                    o_state.a_o_logmsg.push(
+                        f_o_logmsg('Cannot play video: codec not supported by browser. Try MP4 (H.264) or WebM.', false, true, s_o_logmsg_s_type__error, Date.now(), 10000)
+                    );
+                }
             } else {
                 el_video.pause();
                 this.b_playing = false;
@@ -438,16 +409,6 @@ let o_component__videocutter = {
         let o_self = this;
         this._f_on_keydown = function(o_evt){ o_self.f_on_keydown(o_evt); };
         document.addEventListener('keydown', this._f_on_keydown);
-        // load initial file browser
-        let n_id__init = setInterval(async function() {
-            let o_kv_path = o_state.o_keyvalpair__s_path_absolute__filebrowser;
-            let o_kv_ds = o_state.o_keyvalpair__s_ds;
-            if(o_kv_path && o_kv_path.s_value && o_kv_ds && o_kv_ds.s_value){
-                clearInterval(n_id__init);
-                o_self.s_path_browse = o_kv_path.s_value;
-                await o_self.f_load_a_o_fsnode();
-            }
-        }, 50);
     },
     unmounted: function() {
         if(this._f_on_keydown){
