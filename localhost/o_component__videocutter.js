@@ -104,6 +104,7 @@ let o_component__videocutter = {
                     {
                         s_tag: 'div',
                         class: 'o_videocutter__player',
+                        ref: 'el_player',
                         a_o: [
                             {
                                 s_tag: 'video',
@@ -113,6 +114,26 @@ let o_component__videocutter = {
                                 'v-on:ended': 'f_on_ended',
                                 'v-on:error': 'f_on_video_error',
                                 ':src': 's_url_video',
+                            },
+                            // crop rectangle overlay
+                            {
+                                s_tag: 'div',
+                                'v-if': 'n_idx__section_selected >= 0 && a_o_section[n_idx__section_selected]',
+                                class: 'o_videocutter__crop',
+                                ':style': 'f_s_style_crop()',
+                                'v-on:mousedown.prevent': 'f_mousedown_crop($event)',
+                                a_o: [
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__crop__info',
+                                        innerText: "{{ a_o_section[n_idx__section_selected].n_scl_x + 'x' + a_o_section[n_idx__section_selected].n_scl_y }}",
+                                    },
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__crop__handle',
+                                        'v-on:mousedown.prevent.stop': 'f_mousedown_resize($event)',
+                                    },
+                                ],
                             },
                         ],
                     },
@@ -204,6 +225,11 @@ let o_component__videocutter = {
                                     },
                                     {
                                         s_tag: 'div',
+                                        class: 'o_videocutter__section_item__crop',
+                                        innerText: "{{ o_section.n_scl_x + 'x' + o_section.n_scl_y + ' @' + o_section.n_trn_x + ',' + o_section.n_trn_y }}",
+                                    },
+                                    {
+                                        s_tag: 'div',
                                         class: 'interactable o_videocutter__btn o_videocutter__btn--delete',
                                         'v-on:click.stop': 'f_delete_section(n_idx)',
                                         innerText: 'X',
@@ -224,11 +250,20 @@ let o_component__videocutter = {
             b_transcoding: false,
             n_ms_current: 0,
             n_ms_duration: 0,
+            n_scl_x__video: 0,
+            n_scl_y__video: 0,
             b_playing: false,
             b_exporting: false,
             a_o_section: [],
             o_section__pending: null, // {n_ms_start} - waiting for end
             n_idx__section_selected: -1,
+            s_drag_mode: null, // null | 'move' | 'resize'
+            n_drag_x__start: 0,
+            n_drag_y__start: 0,
+            n_drag_trn_x__start: 0,
+            n_drag_trn_y__start: 0,
+            n_drag_scl_x__start: 0,
+            n_drag_scl_y__start: 0,
         };
     },
     methods: {
@@ -272,6 +307,8 @@ let o_component__videocutter = {
         f_on_loaded: function() {
             let el_video = this.$refs.el_video;
             this.n_ms_duration = el_video.duration * 1000;
+            this.n_scl_x__video = el_video.videoWidth;
+            this.n_scl_y__video = el_video.videoHeight;
         },
         f_on_timeupdate: function() {
             let el_video = this.$refs.el_video;
@@ -346,6 +383,77 @@ let o_component__videocutter = {
             if(n_width < 0) n_width = 0;
             return 'left: ' + n_left + '%; width: ' + n_width + '%;';
         },
+        // crop rectangle overlay
+        f_o_video_render_area: function() {
+            let el_video = this.$refs.el_video;
+            if(!el_video || !this.n_scl_x__video || !this.n_scl_y__video) return null;
+            let n_ratio = Math.min(el_video.clientWidth / this.n_scl_x__video, el_video.clientHeight / this.n_scl_y__video);
+            let n_render_x = this.n_scl_x__video * n_ratio;
+            let n_render_y = this.n_scl_y__video * n_ratio;
+            // video is centered in player via flexbox
+            let el_player = this.$refs.el_player;
+            let n_off_x = (el_player.clientWidth - n_render_x) / 2;
+            let n_off_y = (el_player.clientHeight - n_render_y) / 2;
+            return { n_ratio, n_render_x, n_render_y, n_off_x, n_off_y };
+        },
+        f_s_style_crop: function() {
+            let o_area = this.f_o_video_render_area();
+            if(!o_area) return 'display:none';
+            let o_section = this.a_o_section[this.n_idx__section_selected];
+            if(!o_section) return 'display:none';
+            let n_left = o_area.n_off_x + o_section.n_trn_x * o_area.n_ratio;
+            let n_top = o_area.n_off_y + o_section.n_trn_y * o_area.n_ratio;
+            let n_w = o_section.n_scl_x * o_area.n_ratio;
+            let n_h = o_section.n_scl_y * o_area.n_ratio;
+            return 'left:' + n_left + 'px;top:' + n_top + 'px;width:' + n_w + 'px;height:' + n_h + 'px;';
+        },
+        f_mousedown_crop: function(o_evt) {
+            let o_section = this.a_o_section[this.n_idx__section_selected];
+            if(!o_section) return;
+            this.s_drag_mode = 'move';
+            this.n_drag_x__start = o_evt.clientX;
+            this.n_drag_y__start = o_evt.clientY;
+            this.n_drag_trn_x__start = o_section.n_trn_x;
+            this.n_drag_trn_y__start = o_section.n_trn_y;
+        },
+        f_mousedown_resize: function(o_evt) {
+            let o_section = this.a_o_section[this.n_idx__section_selected];
+            if(!o_section) return;
+            this.s_drag_mode = 'resize';
+            this.n_drag_x__start = o_evt.clientX;
+            this.n_drag_y__start = o_evt.clientY;
+            this.n_drag_scl_x__start = o_section.n_scl_x;
+            this.n_drag_scl_y__start = o_section.n_scl_y;
+        },
+        f_mousemove_crop: function(o_evt) {
+            if(!this.s_drag_mode) return;
+            let o_area = this.f_o_video_render_area();
+            if(!o_area) return;
+            let o_section = this.a_o_section[this.n_idx__section_selected];
+            if(!o_section) return;
+            let n_dx = (o_evt.clientX - this.n_drag_x__start) / o_area.n_ratio;
+            let n_dy = (o_evt.clientY - this.n_drag_y__start) / o_area.n_ratio;
+            if(this.s_drag_mode === 'move'){
+                let n_trn_x = Math.round(this.n_drag_trn_x__start + n_dx);
+                let n_trn_y = Math.round(this.n_drag_trn_y__start + n_dy);
+                // clamp to video bounds
+                n_trn_x = Math.max(0, Math.min(n_trn_x, this.n_scl_x__video - o_section.n_scl_x));
+                n_trn_y = Math.max(0, Math.min(n_trn_y, this.n_scl_y__video - o_section.n_scl_y));
+                o_section.n_trn_x = n_trn_x;
+                o_section.n_trn_y = n_trn_y;
+            } else if(this.s_drag_mode === 'resize'){
+                let n_scl_x = Math.round(this.n_drag_scl_x__start + n_dx);
+                let n_scl_y = Math.round(this.n_drag_scl_y__start + n_dy);
+                // clamp minimum 16px, maximum to video bounds minus offset
+                n_scl_x = Math.max(16, Math.min(n_scl_x, this.n_scl_x__video - o_section.n_trn_x));
+                n_scl_y = Math.max(16, Math.min(n_scl_y, this.n_scl_y__video - o_section.n_trn_y));
+                o_section.n_scl_x = n_scl_x;
+                o_section.n_scl_y = n_scl_y;
+            }
+        },
+        f_mouseup_crop: function() {
+            this.s_drag_mode = null;
+        },
         // section management via 'S' key
         f_mark_section: function() {
             if(!this.s_path_video) return;
@@ -366,12 +474,13 @@ let o_component__videocutter = {
                 this.a_o_section.push({
                     n_ms_start: n_ms_start,
                     n_ms_duration: n_ms_end - n_ms_start,
-                    n_scl_x: 0,
-                    n_scl_y: 0,
+                    n_scl_x: this.n_scl_x__video || 480,
+                    n_scl_y: this.n_scl_y__video || 320,
                     n_trn_x: 0,
                     n_trn_y: 0,
                     n_idx__order: this.a_o_section.length,
                 });
+                this.n_idx__section_selected = this.a_o_section.length - 1;
                 this.o_section__pending = null;
             }
         },
@@ -441,12 +550,16 @@ let o_component__videocutter = {
     created: function() {
         let o_self = this;
         this._f_on_keydown = function(o_evt){ o_self.f_on_keydown(o_evt); };
+        this._f_on_mousemove = function(o_evt){ o_self.f_mousemove_crop(o_evt); };
+        this._f_on_mouseup = function(){ o_self.f_mouseup_crop(); };
         document.addEventListener('keydown', this._f_on_keydown);
+        document.addEventListener('mousemove', this._f_on_mousemove);
+        document.addEventListener('mouseup', this._f_on_mouseup);
     },
     unmounted: function() {
-        if(this._f_on_keydown){
-            document.removeEventListener('keydown', this._f_on_keydown);
-        }
+        if(this._f_on_keydown) document.removeEventListener('keydown', this._f_on_keydown);
+        if(this._f_on_mousemove) document.removeEventListener('mousemove', this._f_on_mousemove);
+        if(this._f_on_mouseup) document.removeEventListener('mouseup', this._f_on_mouseup);
     },
 };
 

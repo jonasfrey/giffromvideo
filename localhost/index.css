@@ -477,6 +477,33 @@ main {
     min-height: 0;
     background: #000;
     overflow: hidden;
+    position: relative;
+}
+.o_videocutter__crop {
+    position: absolute;
+    border: 2px solid red;
+    box-sizing: border-box;
+    cursor: move;
+    pointer-events: auto;
+    z-index: 10;
+}
+.o_videocutter__crop__handle {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    width: 12px;
+    height: 12px;
+    background: red;
+    cursor: nwse-resize;
+}
+.o_videocutter__crop__info {
+    position: absolute;
+    top: -20px;
+    left: 0;
+    font-size: 11px;
+    color: red;
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 .o_videocutter__player video {
@@ -598,4 +625,9 @@ main {
     font-family: monospace;
     color: var(--c-text-mute);
     font-size: 0.8rem;
+}
+.o_videocutter__section_item__crop {
+    font-family: monospace;
+    color: red;
+    font-size: 0.75rem;
 }

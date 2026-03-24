@@ -155,12 +155,21 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         throw new Error('s_path_video and a_o_section are required');
     }
 
-    // build ffmpeg filter_complex: trim each section, crop, scale, concat
+    // build ffmpeg filter_complex: trim each section, crop, pad centered on max canvas, concat
     let a_s_filter_input = [];
     let a_s_filter_scaled = [];
-    // find common output dimensions from first section (or use defaults)
-    let n_scl_x__output = a_o_section[0].n_scl_x || 480;
-    let n_scl_y__output = a_o_section[0].n_scl_y || 320;
+    // output resolution = max width and max height across all sections
+    let n_scl_x__output = 0;
+    let n_scl_y__output = 0;
+    for(let n_idx = 0; n_idx < a_o_section.length; n_idx++){
+        let n_scl_x = a_o_section[n_idx].n_scl_x || 480;
+        let n_scl_y = a_o_section[n_idx].n_scl_y || 320;
+        if(n_scl_x > n_scl_x__output) n_scl_x__output = n_scl_x;
+        if(n_scl_y > n_scl_y__output) n_scl_y__output = n_scl_y;
+    }
+    // ensure even dimensions for codec compatibility
+    n_scl_x__output = Math.ceil(n_scl_x__output / 2) * 2;
+    n_scl_y__output = Math.ceil(n_scl_y__output / 2) * 2;
 
     for(let n_idx = 0; n_idx < a_o_section.length; n_idx++){
         let o_section = a_o_section[n_idx];
@@ -171,15 +180,17 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         let n_trn_x = o_section.n_trn_x || 0;
         let n_trn_y = o_section.n_trn_y || 0;
 
-        // trim segment
-        let s_trim = `[0:v]trim=start=${n_sec_start}:duration=${n_sec_duration},setpts=PTS-STARTPTS`;
-        // crop if translation offsets are set (crop from offset, to width/height)
-        if(n_trn_x !== 0 || n_trn_y !== 0){
-            s_trim += `,crop=${n_scl_x}:${n_scl_y}:${n_trn_x}:${n_trn_y}`;
+        // trim segment, crop to section rectangle
+        let s_filter = `[0:v]trim=start=${n_sec_start}:duration=${n_sec_duration},setpts=PTS-STARTPTS`;
+        s_filter += `,crop=${n_scl_x}:${n_scl_y}:${n_trn_x}:${n_trn_y}`;
+        // pad to output canvas centered with black background
+        if(n_scl_x !== n_scl_x__output || n_scl_y !== n_scl_y__output){
+            let n_pad_x = Math.floor((n_scl_x__output - n_scl_x) / 2);
+            let n_pad_y = Math.floor((n_scl_y__output - n_scl_y) / 2);
+            s_filter += `,pad=${n_scl_x__output}:${n_scl_y__output}:${n_pad_x}:${n_pad_y}:black`;
         }
-        // scale to output dimensions
-        s_trim += `,scale=${n_scl_x__output}:${n_scl_y__output}:flags=lanczos[v${n_idx}]`;
-        a_s_filter_input.push(s_trim);
+        s_filter += `[v${n_idx}]`;
+        a_s_filter_input.push(s_filter);
         a_s_filter_scaled.push(`[v${n_idx}]`);
     }
 
