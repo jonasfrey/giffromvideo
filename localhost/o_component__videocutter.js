@@ -229,67 +229,66 @@ let o_component__videocutter = {
                             },
                         ],
                     },
-                ],
-            },
-            // right overlay panel for sections
-            {
-                s_tag: 'div',
-                class: 'o_videocutter__panel',
-                ':class': "{ open: b_panel }",
-                'v-if': 's_path_video',
-                a_o: [
+                    // right overlay panel for sections
                     {
                         s_tag: 'div',
-                        class: 'o_videocutter__panel__toggle interactable',
-                        'v-on:click': 'b_panel = !b_panel',
-                        innerText: "{{ b_panel ? '>' : '< ' + a_o_section.length }}",
-                    },
-                    {
-                        s_tag: 'div',
-                        class: 'o_videocutter__panel__content',
-                        'v-if': 'b_panel',
+                        class: 'o_videocutter__panel',
+                        ':class': "{ open: b_panel }",
                         a_o: [
                             {
                                 s_tag: 'div',
-                                class: 'o_videocutter__section_list__title',
-                                innerText: 'Sections ({{ a_o_section.length }})',
+                                class: 'o_videocutter__panel__toggle',
+                                'v-on:click': 'b_panel = !b_panel',
+                                innerText: "{{ b_panel ? '>' : '< ' + a_o_section.length }}",
                             },
                             {
                                 s_tag: 'div',
-                                class: 'o_videocutter__panel__scroll',
+                                class: 'o_videocutter__panel__content',
+                                'v-if': 'b_panel',
                                 a_o: [
                                     {
                                         s_tag: 'div',
-                                        'v-for': '(o_section, n_idx) in a_o_section',
-                                        class: 'o_videocutter__section_item',
-                                        ':class': "{ active: n_idx__section_selected === n_idx }",
-                                        'v-on:click': 'f_select_section(n_idx)',
+                                        class: 'o_videocutter__section_list__title',
+                                        innerText: 'Sections ({{ a_o_section.length }})',
+                                    },
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__panel__scroll',
                                         a_o: [
                                             {
                                                 s_tag: 'div',
-                                                class: 'o_videocutter__section_item__num',
-                                                innerText: '{{ n_idx + 1 }}',
-                                            },
-                                            {
-                                                s_tag: 'div',
-                                                class: 'o_videocutter__section_item__time',
-                                                innerText: '{{ f_s_time(o_section.n_ms_start) }} - {{ f_s_time(o_section.n_ms_start + o_section.n_ms_duration) }}',
-                                            },
-                                            {
-                                                s_tag: 'div',
-                                                class: 'o_videocutter__section_item__dur',
-                                                innerText: '{{ f_s_time(o_section.n_ms_duration) }}',
-                                            },
-                                            {
-                                                s_tag: 'div',
-                                                class: 'o_videocutter__section_item__crop',
-                                                innerText: "{{ o_section.n_scl_x + 'x' + o_section.n_scl_y + ' @' + o_section.n_trn_x + ',' + o_section.n_trn_y }}",
-                                            },
-                                            {
-                                                s_tag: 'div',
-                                                class: 'interactable o_videocutter__btn o_videocutter__btn--delete',
-                                                'v-on:click.stop': 'f_delete_section(n_idx)',
-                                                innerText: 'X',
+                                                'v-for': '(o_section, n_idx) in a_o_section',
+                                                class: 'o_videocutter__section_item',
+                                                ':class': "{ active: n_idx__section_selected === n_idx }",
+                                                'v-on:click': 'f_select_section(n_idx)',
+                                                a_o: [
+                                                    {
+                                                        s_tag: 'div',
+                                                        class: 'o_videocutter__section_item__num',
+                                                        innerText: '{{ n_idx + 1 }}',
+                                                    },
+                                                    {
+                                                        s_tag: 'div',
+                                                        class: 'o_videocutter__section_item__time',
+                                                        innerText: '{{ f_s_time(o_section.n_ms_start) }} - {{ f_s_time(o_section.n_ms_start + o_section.n_ms_duration) }}',
+                                                    },
+                                                    {
+                                                        s_tag: 'div',
+                                                        class: 'o_videocutter__section_item__dur',
+                                                        innerText: '{{ f_s_time(o_section.n_ms_duration) }}',
+                                                    },
+                                                    {
+                                                        s_tag: 'div',
+                                                        class: 'o_videocutter__section_item__crop',
+                                                        innerText: "{{ o_section.n_scl_x + 'x' + o_section.n_scl_y + ' @' + o_section.n_trn_x + ',' + o_section.n_trn_y }}",
+                                                    },
+                                                    {
+                                                        s_tag: 'div',
+                                                        class: 'interactable o_videocutter__btn o_videocutter__btn--delete',
+                                                        'v-on:click.stop': 'f_delete_section(n_idx)',
+                                                        innerText: 'X',
+                                                    },
+                                                ],
                                             },
                                         ],
                                     },

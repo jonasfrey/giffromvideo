@@ -406,7 +406,6 @@ main {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    position: relative;
 }
 
 .o_videocutter__filepicker {
@@ -428,6 +427,7 @@ main {
     flex-direction: column;
     flex: 1;
     min-height: 0;
+    position: relative;
 }
 
 .o_videocutter__toolbar {
@@ -618,25 +618,32 @@ main {
     position: absolute;
     top: 0;
     right: 0;
-    height: 100%;
+    bottom: 0;
     z-index: 20;
     display: flex;
+    align-items: stretch;
     pointer-events: none;
 }
 .o_videocutter__panel__toggle {
     pointer-events: auto;
-    align-self: flex-start;
-    margin-top: 4rem;
-    padding: 0.4rem 0.3rem;
-    background: var(--c-surface);
-    border: 1px solid var(--c-border);
-    border-right: none;
-    border-radius: var(--r) 0 0 var(--r);
-    color: var(--c-text-dim);
-    font-size: 0.8rem;
+    writing-mode: vertical-lr;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 0.4rem;
+    background: var(--c-accent);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
     font-family: monospace;
     white-space: nowrap;
-    writing-mode: vertical-lr;
+    cursor: pointer;
+    border-radius: var(--r) 0 0 var(--r);
+    align-self: center;
+    letter-spacing: 0.05em;
+}
+.o_videocutter__panel__toggle:hover {
+    background: #7b64da;
 }
 .o_videocutter__panel__content {
     pointer-events: auto;
