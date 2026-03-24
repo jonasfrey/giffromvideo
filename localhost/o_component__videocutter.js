@@ -387,6 +387,18 @@ let o_component__videocutter = {
         f_on_timeupdate: function() {
             let el_video = this.$refs.el_video;
             this.n_ms_current = el_video.currentTime * 1000;
+            this.f_update_section_from_time();
+        },
+        f_update_section_from_time: function() {
+            let n_ms = this.n_ms_current;
+            for(let n_idx = 0; n_idx < this.a_o_section.length; n_idx++){
+                let o_s = this.a_o_section[n_idx];
+                if(n_ms >= o_s.n_ms_start && n_ms < o_s.n_ms_start + o_s.n_ms_duration){
+                    this.n_idx__section_selected = n_idx;
+                    return;
+                }
+            }
+            // not inside any section — keep current selection
         },
         f_on_ended: function() {
             this.b_playing = false;
@@ -443,6 +455,7 @@ let o_component__videocutter = {
             n_ratio = Math.max(0, Math.min(1, n_ratio));
             el_video.currentTime = n_ratio * el_video.duration;
             this.n_ms_current = el_video.currentTime * 1000;
+            this.f_update_section_from_time();
         },
         f_s_style_section: function(o_section) {
             if(this.n_ms_duration <= 0) return '';
