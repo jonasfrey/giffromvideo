@@ -38,13 +38,13 @@ let o_component__filebrowser = {
                     {
                         s_tag: 'div',
                         'v-for': 'o_fsnode of a_o_fsnode',
-                        ':class': "'o_fsnode ' + (o_fsnode.b_folder ? 'interactable' : 'file')",
+                        ':class': "'o_fsnode interactable' + (o_fsnode.b_folder ? '' : (f_b_video(o_fsnode) ? ' o_fsnode--video' : ' file'))",
                         'v-on:click': 'f_click_fsnode(o_fsnode)',
                         a_o: [
                             {
                                 s_tag: 'div',
                                 class: 'o_fsnode__type',
-                                innerText: "{{ o_fsnode.b_folder ? 'dir' : 'file' }}",
+                                innerText: "{{ o_fsnode.b_folder ? 'dir' : (f_b_video(o_fsnode) ? 'vid' : 'file') }}",
                             },
                             {
                                 s_tag: 'div',
@@ -82,11 +82,21 @@ let o_component__filebrowser = {
                 o_data: { n_id: o_state.o_keyvalpair__s_path_absolute__filebrowser.n_id, s_value: s_path_absolute }
             });
         },
+        f_b_video: function(o_fsnode) {
+            let s_name = (o_fsnode.s_name || '').toLowerCase();
+            let a_s_ext = ['.mp4', '.webm', '.mkv', '.avi', '.mov'];
+            return a_s_ext.some(function(s_ext){ return s_name.endsWith(s_ext); });
+        },
         f_click_fsnode: async function(o_fsnode) {
-            if (!o_fsnode.b_folder) return;
-            this.s_path_absolute = o_fsnode.s_path_absolute;
-            await this.f_save_path(this.s_path_absolute);
-            await this.f_load_a_o_fsnode();
+            if(o_fsnode.b_folder){
+                this.s_path_absolute = o_fsnode.s_path_absolute;
+                await this.f_save_path(this.s_path_absolute);
+                await this.f_load_a_o_fsnode();
+            } else if(this.f_b_video(o_fsnode)){
+                // open video in videocutter in new tab
+                let s_url = window.location.origin + '/#/videocutter?s_path=' + encodeURIComponent(o_fsnode.s_path_absolute);
+                window.open(s_url, '_blank');
+            }
         },
         f_navigate_up: async function() {
             let s_path_parent = f_s_path_parent(this.s_path_absolute, this.s_ds);

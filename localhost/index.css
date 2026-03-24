@@ -378,6 +378,12 @@ main {
 .o_fsnode.file {
     color: var(--c-text-mute);
 }
+.o_fsnode--video {
+    color: var(--c-accent);
+}
+.o_fsnode--video .o_fsnode__type {
+    color: var(--c-accent);
+}
 
 .o_fsnode__type {
     font-size: 0.7rem;
@@ -446,6 +452,36 @@ main {
     font-size: 0.9rem;
 }
 
+.o_videocutter__composition {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--c-border);
+    font-size: 0.85rem;
+}
+.o_videocutter__composition__input {
+    flex: 1;
+    padding: 0.3rem 0.5rem;
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    color: var(--c-text);
+    border-radius: var(--r);
+    font-size: 0.85rem;
+}
+.o_videocutter__composition__select {
+    padding: 0.3rem 0.5rem;
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    color: var(--c-text);
+    border-radius: var(--r);
+    font-size: 0.85rem;
+}
+.o_videocutter__composition__dir {
+    color: var(--c-text-mute);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
 .o_videocutter__btn {
     padding: 0.35rem 0.8rem;
     border-radius: var(--r);

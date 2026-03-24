@@ -1,7 +1,7 @@
 // Copyright (C) [2026] [Jonas Immanuel Frey] - Licensed under GPLv2. See LICENSE file for details.
 
 import { f_o_html_from_o_js } from "./lib/handyhelpers.js";
-import { f_send_wsmsg_with_response, o_state } from './index.js';
+import { f_send_wsmsg_with_response, o_wsmsg__syncdata, o_state } from './index.js';
 import {
     f_o_wsmsg,
     o_wsmsg__export_gif,
@@ -64,6 +64,44 @@ let o_component__videocutter = {
                 class: 'o_videocutter__main',
                 'v-if': 's_path_video',
                 a_o: [
+                    // composition bar
+                    {
+                        s_tag: 'div',
+                        class: 'o_videocutter__composition',
+                        a_o: [
+                            {
+                                s_tag: 'input',
+                                type: 'text',
+                                class: 'o_videocutter__composition__input',
+                                placeholder: 'Composition name',
+                                ':value': 's_name__composition',
+                                'v-on:input': 's_name__composition = $event.target.value',
+                            },
+                            {
+                                s_tag: 'select',
+                                class: 'o_videocutter__composition__select',
+                                'v-on:change': 'f_load_composition(Number($event.target.value))',
+                                a_o: [
+                                    {
+                                        s_tag: 'option',
+                                        value: '0',
+                                        innerText: '-- Load existing --',
+                                    },
+                                    {
+                                        s_tag: 'option',
+                                        'v-for': 'o_comp in a_o_composition',
+                                        ':value': 'o_comp.n_id',
+                                        innerText: '{{ o_comp.s_name }}',
+                                    },
+                                ],
+                            },
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__composition__dir',
+                                innerText: "{{ 'Export dir: ' + s_path_dir__export }}",
+                            },
+                        ],
+                    },
                     // toolbar
                     {
                         s_tag: 'div',
@@ -246,6 +284,8 @@ let o_component__videocutter = {
         return {
             s_path_video: null,
             s_url_video: null,
+            s_name__composition: '',
+            n_id__composition: 0,
             b_uploading: false,
             b_transcoding: false,
             n_ms_current: 0,
@@ -265,6 +305,18 @@ let o_component__videocutter = {
             n_drag_scl_x__start: 0,
             n_drag_scl_y__start: 0,
         };
+    },
+    computed: {
+        a_o_composition: function() {
+            return o_state.a_o_video_composition || [];
+        },
+        a_o_video_section__db: function() {
+            return o_state.a_o_video_section || [];
+        },
+        s_path_dir__export: function() {
+            let o_kv = o_state.o_keyvalpair__s_path_dir__export;
+            return (o_kv && o_kv.s_value) ? o_kv.s_value : '/tmp/giffromvideo_export';
+        },
     },
     methods: {
         f_s_time: f_s_time__from_n_ms,
@@ -502,6 +554,81 @@ let o_component__videocutter = {
                 this.n_idx__section_selected = this.a_o_section.length - 1;
             }
         },
+        // composition save/load
+        f_load_composition: function(n_id) {
+            if(!n_id) return;
+            let o_comp = this.a_o_composition.find(function(o){ return o.n_id === n_id; });
+            if(!o_comp) return;
+            this.n_id__composition = n_id;
+            this.s_name__composition = o_comp.s_name;
+            // load sections belonging to this composition
+            let a_o = this.a_o_video_section__db.filter(function(o){
+                return o.n_o_video_composition_n_id === n_id;
+            });
+            this.a_o_section = a_o.map(function(o, n_idx){
+                return {
+                    n_ms_start: o.n_ms_start,
+                    n_ms_duration: o.n_ms_duration,
+                    n_scl_x: o.n_scl_x,
+                    n_scl_y: o.n_scl_y,
+                    n_trn_x: o.n_trn_x,
+                    n_trn_y: o.n_trn_y,
+                    n_idx__order: n_idx,
+                };
+            });
+            this.n_idx__section_selected = this.a_o_section.length > 0 ? 0 : -1;
+            this.o_section__pending = null;
+        },
+        f_save_composition: async function() {
+            if(!this.s_name__composition) return;
+            let n_id__comp = this.n_id__composition;
+            // create or update composition
+            if(n_id__comp){
+                await o_wsmsg__syncdata.f_v_sync({
+                    s_name_table: 'a_o_video_composition',
+                    s_operation: 'update',
+                    o_data: { n_id: n_id__comp, s_name: this.s_name__composition },
+                });
+                // delete old sections for this composition
+                let a_o_old = this.a_o_video_section__db.filter(function(o){
+                    return o.n_o_video_composition_n_id === n_id__comp;
+                });
+                for(let o_old of a_o_old){
+                    await o_wsmsg__syncdata.f_v_sync({
+                        s_name_table: 'a_o_video_section',
+                        s_operation: 'delete',
+                        o_data: { n_id: o_old.n_id },
+                    });
+                }
+            } else {
+                let o_comp = await o_wsmsg__syncdata.f_v_sync({
+                    s_name_table: 'a_o_video_composition',
+                    s_operation: 'create',
+                    o_data: { s_name: this.s_name__composition },
+                });
+                n_id__comp = o_comp.n_id;
+                this.n_id__composition = n_id__comp;
+            }
+            // create sections
+            for(let n_idx = 0; n_idx < this.a_o_section.length; n_idx++){
+                let o_s = this.a_o_section[n_idx];
+                await o_wsmsg__syncdata.f_v_sync({
+                    s_name_table: 'a_o_video_section',
+                    s_operation: 'create',
+                    o_data: {
+                        n_o_video_composition_n_id: n_id__comp,
+                        n_o_video_n_id: 0,
+                        n_ms_start: o_s.n_ms_start,
+                        n_ms_duration: o_s.n_ms_duration,
+                        n_scl_x: o_s.n_scl_x,
+                        n_scl_y: o_s.n_scl_y,
+                        n_trn_x: o_s.n_trn_x,
+                        n_trn_y: o_s.n_trn_y,
+                        n_idx__order: n_idx,
+                    },
+                });
+            }
+        },
         // export
         f_export_gif: async function() {
             if(this.a_o_section.length === 0 || this.b_exporting) return;
@@ -510,10 +637,16 @@ let o_component__videocutter = {
                 f_o_logmsg('Starting GIF export...', false, true, s_o_logmsg_s_type__info, Date.now(), 10000)
             );
             try {
+                // save composition to DB if name is set
+                if(this.s_name__composition){
+                    await this.f_save_composition();
+                }
                 let o_resp = await f_send_wsmsg_with_response(
                     f_o_wsmsg(o_wsmsg__export_gif.s_name, {
                         s_path_video: this.s_path_video,
                         a_o_section: this.a_o_section,
+                        s_path_dir__export: this.s_path_dir__export,
+                        s_name__composition: this.s_name__composition || null,
                     })
                 );
                 if(o_resp.s_error){
@@ -555,6 +688,12 @@ let o_component__videocutter = {
         document.addEventListener('keydown', this._f_on_keydown);
         document.addEventListener('mousemove', this._f_on_mousemove);
         document.addEventListener('mouseup', this._f_on_mouseup);
+        // check for video path from query param (opened from file browser)
+        let s_path_query = this.$route && this.$route.query && this.$route.query.s_path;
+        if(s_path_query){
+            this.s_path_video = s_path_query;
+            this.s_url_video = '/api/file?path=' + encodeURIComponent(s_path_query);
+        }
     },
     unmounted: function() {
         if(this._f_on_keydown) document.removeEventListener('keydown', this._f_on_keydown);

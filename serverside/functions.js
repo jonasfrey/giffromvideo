@@ -149,10 +149,27 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
     let v_data = o_wsmsg.v_data;
     let s_path_video = v_data.s_path_video;
     let a_o_section = v_data.a_o_section; // [{n_ms_start, n_ms_duration, n_scl_x, n_scl_y, n_trn_x, n_trn_y}]
-    let s_path_output = v_data.s_path_output || s_path_video.replace(/\.[^.]+$/, '.gif');
+    let s_path_dir__export = v_data.s_path_dir__export || null;
+    let s_name__composition = v_data.s_name__composition || null;
 
     if(!s_path_video || !a_o_section || a_o_section.length === 0){
         throw new Error('s_path_video and a_o_section are required');
+    }
+
+    // determine output path: use export dir if provided, otherwise beside the video
+    let s_path_output = v_data.s_path_output;
+    if(!s_path_output){
+        let s_filename = s_path_video.split(s_ds).pop().replace(/\.[^.]+$/, '');
+        if(s_name__composition){
+            s_filename = s_name__composition.replace(/[^a-zA-Z0-9_\-]/g, '_');
+        }
+        if(s_path_dir__export){
+            // ensure export directory exists
+            try { await Deno.mkdir(s_path_dir__export, { recursive: true }); } catch {}
+            s_path_output = s_path_dir__export + s_ds + s_filename + '.gif';
+        } else {
+            s_path_output = s_path_video.replace(/\.[^.]+$/, '.gif');
+        }
     }
 
     // build ffmpeg filter_complex: trim each section, crop, pad centered on max canvas, concat

@@ -116,11 +116,23 @@ let o_model__o_video = f_o_model({
     ]
 });
 
+
+let o_model__o_video_composition = f_o_model({
+    s_name: 'o_video_composition',
+    a_o_property: [
+        f_o_model_prop__default_id(s_name_prop_id),
+        f_o_property('s_name', 'string', (s)=>{return s!==''}),
+        f_o_model_prop__timestamp_default(s_name_prop_ts_created),
+        f_o_model_prop__timestamp_default(s_name_prop_ts_updated),
+    ]
+});
+
 let o_model__o_video_section = f_o_model({
     s_name: 'o_video_section',
     a_o_property: [
         f_o_model_prop__default_id(s_name_prop_id),
         f_o_model_prop__default_id(f_s_name_foreign_key__params(o_model__o_video, s_name_prop_id)),
+        f_o_model_prop__default_id(f_s_name_foreign_key__params(o_model__o_video_composition, s_name_prop_id)),
         f_o_property('n_ms_start', 'number'),
         f_o_property('n_ms_duration', 'number'),
         f_o_property('n_scl_x', 'number'),
@@ -151,6 +163,7 @@ let a_o_model = [
     o_model__o_keyvalpair,
     o_model__o_utterance,
     o_model__o_video,
+    o_model__o_video_composition,
     o_model__o_video_section
 ];
 
@@ -231,6 +244,7 @@ export {
     o_model__o_keyvalpair,
     o_model__o_utterance,
     o_model__o_video,
+    o_model__o_video_composition,
     o_model__o_video_section,
     a_o_model,
     f_o_property,

@@ -23,6 +23,10 @@ let o_o_keyvalpair__default = {
         s_key: 's_ds',
         s_value: s_ds,
     },
+    o_keyvalpair__s_path_dir__export : {
+        s_key: 's_path_dir__export',
+        s_value: s_root_dir + s_ds + 'export',
+    },
 }
 
 let o_course__opensource101 = {
