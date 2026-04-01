@@ -206,8 +206,9 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         let n_trn_x = o_section.n_trn_x || 0;
         let n_trn_y = o_section.n_trn_y || 0;
 
-        // trim segment, crop to section rectangle
+        // trim segment, normalize SAR to square pixels (browser videoWidth accounts for SAR), then crop
         let s_filter = `[0:v]trim=start=${n_sec_start}:duration=${n_sec_duration},setpts=PTS-STARTPTS`;
+        s_filter += `,scale=iw*sar:ih,setsar=1`;
         s_filter += `,crop=${n_scl_x}:${n_scl_y}:${n_trn_x}:${n_trn_y}`;
         // speed adjustment: setpts=PTS/speed
         if(n_ratio__speed !== 1.0){
