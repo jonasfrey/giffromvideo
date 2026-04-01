@@ -132,9 +132,200 @@ let o_component__videocutter = {
                             },
                             {
                                 s_tag: 'div',
+                                class: 'interactable o_videocutter__btn',
+                                'v-on:click': 'b_settings = !b_settings',
+                                innerText: "{{ b_settings ? 'Hide Settings' : 'Settings' }}",
+                            },
+                            {
+                                s_tag: 'div',
                                 'v-if': 'b_transcoding',
                                 class: 'o_videocutter__status',
                                 innerText: 'Transcoding to H.264 for browser playback...',
+                            },
+                        ],
+                    },
+                    // settings panel
+                    {
+                        s_tag: 'div',
+                        'v-if': 'b_settings',
+                        class: 'o_videocutter__settings',
+                        a_o: [
+                            // presets row
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__settings__row',
+                                a_o: [
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__label',
+                                        innerText: 'Preset',
+                                    },
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__preset',
+                                        a_o: [
+                                            {
+                                                s_tag: 'div',
+                                                class: 'interactable o_videocutter__btn',
+                                                'v-on:click': 'f_apply_preset("social")',
+                                                innerText: 'Social Media',
+                                            },
+                                            {
+                                                s_tag: 'div',
+                                                class: 'interactable o_videocutter__btn',
+                                                'v-on:click': 'f_apply_preset("quality")',
+                                                innerText: 'High Quality',
+                                            },
+                                            {
+                                                s_tag: 'div',
+                                                class: 'interactable o_videocutter__btn',
+                                                'v-on:click': 'f_apply_preset("small")',
+                                                innerText: 'Small File',
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                            // FPS
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__settings__row',
+                                a_o: [
+                                    { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'FPS' },
+                                    {
+                                        s_tag: 'input',
+                                        type: 'range',
+                                        min: '4', max: '30', step: '1',
+                                        ':value': 'n_fps',
+                                        'v-on:input': 'n_fps = Number($event.target.value)',
+                                    },
+                                    { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_fps }}' },
+                                ],
+                            },
+                            // Width
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__settings__row',
+                                a_o: [
+                                    { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Width' },
+                                    {
+                                        s_tag: 'input',
+                                        type: 'range',
+                                        min: '0', max: '1920', step: '16',
+                                        ':value': 'n_scl_x__target',
+                                        'v-on:input': 'n_scl_x__target = Number($event.target.value)',
+                                    },
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__val',
+                                        innerText: "{{ n_scl_x__target === 0 ? 'Original' : n_scl_x__target + 'px' }}",
+                                    },
+                                ],
+                            },
+                            // Speed
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__settings__row',
+                                a_o: [
+                                    { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Speed' },
+                                    {
+                                        s_tag: 'input',
+                                        type: 'range',
+                                        min: '0.25', max: '4', step: '0.25',
+                                        ':value': 'n_ratio__speed',
+                                        'v-on:input': 'n_ratio__speed = Number($event.target.value)',
+                                    },
+                                    { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_ratio__speed }}x' },
+                                ],
+                            },
+                            // estimate
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__settings__estimate',
+                                innerText: "{{ '~' + (n_bytes__estimate / 1024 / 1024).toFixed(1) + ' MB estimated' }}",
+                            },
+                            // advanced toggle
+                            {
+                                s_tag: 'div',
+                                class: 'interactable o_videocutter__settings__toggle',
+                                'v-on:click': 'b_setting__advanced = !b_setting__advanced',
+                                innerText: "{{ b_setting__advanced ? 'Hide Advanced' : 'Show Advanced' }}",
+                            },
+                            // advanced settings
+                            {
+                                s_tag: 'div',
+                                'v-if': 'b_setting__advanced',
+                                class: 'o_videocutter__settings__advanced',
+                                a_o: [
+                                    // colors
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Colors' },
+                                            {
+                                                s_tag: 'input',
+                                                type: 'range',
+                                                min: '16', max: '256', step: '16',
+                                                ':value': 'n_cnt__color',
+                                                'v-on:input': 'n_cnt__color = Number($event.target.value)',
+                                            },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_cnt__color }}' },
+                                        ],
+                                    },
+                                    // dither
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Dither' },
+                                            {
+                                                s_tag: 'select',
+                                                ':value': 's_dither',
+                                                'v-on:change': 's_dither = $event.target.value',
+                                                a_o: [
+                                                    { s_tag: 'option', value: 'bayer', innerText: 'Bayer (default)' },
+                                                    { s_tag: 'option', value: 'floyd_steinberg', innerText: 'Floyd-Steinberg' },
+                                                    { s_tag: 'option', value: 'none', innerText: 'None' },
+                                                ],
+                                            },
+                                        ],
+                                    },
+                                    // loop
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Loop' },
+                                            {
+                                                s_tag: 'select',
+                                                ':value': 'n_cnt__loop',
+                                                'v-on:change': 'n_cnt__loop = Number($event.target.value)',
+                                                a_o: [
+                                                    { s_tag: 'option', value: '0', innerText: 'Infinite' },
+                                                    { s_tag: 'option', value: '1', innerText: 'Play once' },
+                                                    { s_tag: 'option', value: '3', innerText: '3 times' },
+                                                ],
+                                            },
+                                        ],
+                                    },
+                                    // max file size
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Max size' },
+                                            {
+                                                s_tag: 'input',
+                                                type: 'range',
+                                                min: '1', max: '50', step: '1',
+                                                ':value': 'n_bytes__max',
+                                                'v-on:input': 'n_bytes__max = Number($event.target.value)',
+                                            },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_bytes__max }} MB' },
+                                        ],
+                                    },
+                                ],
                             },
                         ],
                     },
@@ -296,6 +487,100 @@ let o_component__videocutter = {
                             },
                         ],
                     },
+                    // GIF preview overlay
+                    {
+                        s_tag: 'div',
+                        'v-if': 'b_preview && o_result__export',
+                        class: 'o_videocutter__preview',
+                        a_o: [
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__preview__header',
+                                a_o: [
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__preview__title',
+                                        innerText: 'Export Result',
+                                    },
+                                    {
+                                        s_tag: 'div',
+                                        class: 'interactable o_videocutter__btn',
+                                        'v-on:click': 'b_preview = false',
+                                        innerText: 'Close',
+                                    },
+                                ],
+                            },
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__preview__body',
+                                a_o: [
+                                    {
+                                        s_tag: 'img',
+                                        ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.s_path_output) + '&t=' + Date.now()",
+                                        class: 'o_videocutter__preview__gif',
+                                    },
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__preview__meta',
+                                        a_o: [
+                                            {
+                                                s_tag: 'div',
+                                                class: 'o_videocutter__preview__meta__row',
+                                                a_o: [
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Size' },
+                                                    { s_tag: 'div', innerText: "{{ (o_result__export.n_bytes / 1024 / 1024).toFixed(2) + ' MB' }}" },
+                                                ],
+                                            },
+                                            {
+                                                s_tag: 'div',
+                                                class: 'o_videocutter__preview__meta__row',
+                                                a_o: [
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'FPS' },
+                                                    { s_tag: 'div', innerText: '{{ o_result__export.n_fps }}' },
+                                                ],
+                                            },
+                                            {
+                                                s_tag: 'div',
+                                                class: 'o_videocutter__preview__meta__row',
+                                                a_o: [
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Resolution' },
+                                                    { s_tag: 'div', innerText: "{{ o_result__export.n_scl_x + 'x' + o_result__export.n_scl_y }}" },
+                                                ],
+                                            },
+                                            {
+                                                s_tag: 'div',
+                                                class: 'o_videocutter__preview__meta__row',
+                                                a_o: [
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Duration' },
+                                                    { s_tag: 'div', innerText: '{{ f_s_time(o_result__export.n_ms_duration) }}' },
+                                                ],
+                                            },
+                                            {
+                                                s_tag: 'div',
+                                                class: 'o_videocutter__preview__meta__row',
+                                                a_o: [
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Path' },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__path', innerText: '{{ o_result__export.s_path_output }}' },
+                                                ],
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__preview__action',
+                                a_o: [
+                                    {
+                                        s_tag: 'div',
+                                        class: 'interactable o_videocutter__btn o_videocutter__btn--export',
+                                        'v-on:click': 'b_preview = false; b_settings = true;',
+                                        innerText: 'Adjust & Re-export',
+                                    },
+                                ],
+                            },
+                        ],
+                    },
                 ],
             },
         ],
@@ -325,6 +610,19 @@ let o_component__videocutter = {
             n_drag_trn_y__start: 0,
             n_drag_scl_x__start: 0,
             n_drag_scl_y__start: 0,
+            // export settings
+            b_settings: false,
+            b_setting__advanced: false,
+            n_fps: 15,
+            n_scl_x__target: 0,       // 0 = original size
+            n_cnt__color: 256,
+            s_dither: 'bayer',
+            n_cnt__loop: 0,            // 0 = infinite
+            n_ratio__speed: 1.0,
+            n_bytes__max: 20,          // MB
+            // preview
+            b_preview: false,
+            o_result__export: null,    // {s_path_output, n_bytes, n_fps, n_scl_x, n_scl_y, n_ms_duration}
         };
     },
     computed: {
@@ -338,9 +636,42 @@ let o_component__videocutter = {
             let o_kv = o_state.o_keyvalpair__s_path_dir__export;
             return (o_kv && o_kv.s_value) ? o_kv.s_value : '/tmp/giffromvideo_export';
         },
+        n_bytes__estimate: function() {
+            let n_ms_total = this.a_o_section.reduce(function(n, o){ return n + o.n_ms_duration; }, 0);
+            if(n_ms_total === 0) return 0;
+            let n_sec = (n_ms_total / 1000) / (this.n_ratio__speed || 1);
+            let n_scl_x = this.n_scl_x__target || Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_x || 480; }));
+            let n_ratio__aspect = (this.n_scl_y__video || 320) / (this.n_scl_x__video || 480);
+            let n_scl_y = this.n_scl_x__target ? Math.round(this.n_scl_x__target * n_ratio__aspect) : Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_y || 320; }));
+            let n_pixel_per_frame = n_scl_x * n_scl_y;
+            let n_frame = n_sec * this.n_fps;
+            let n_byte_per_pixel = 0.4 * (this.n_cnt__color / 256);
+            return Math.round(n_pixel_per_frame * n_frame * n_byte_per_pixel);
+        },
     },
     methods: {
         f_s_time: f_s_time__from_n_ms,
+        f_apply_preset: function(s_preset) {
+            if(s_preset === 'social'){
+                this.n_fps = 12;
+                this.n_scl_x__target = 480;
+                this.n_cnt__color = 256;
+                this.s_dither = 'bayer';
+                this.n_bytes__max = 8;
+            } else if(s_preset === 'quality'){
+                this.n_fps = 24;
+                this.n_scl_x__target = 0;
+                this.n_cnt__color = 256;
+                this.s_dither = 'floyd_steinberg';
+                this.n_bytes__max = 50;
+            } else if(s_preset === 'small'){
+                this.n_fps = 8;
+                this.n_scl_x__target = 320;
+                this.n_cnt__color = 128;
+                this.s_dither = 'bayer';
+                this.n_bytes__max = 5;
+            }
+        },
         // file picker
         f_on_file_selected: async function(o_evt) {
             let o_file = o_evt.target.files[0];
@@ -681,19 +1012,41 @@ let o_component__videocutter = {
                         a_o_section: this.a_o_section,
                         s_path_dir__export: this.s_path_dir__export,
                         s_name__composition: this.s_name__composition || null,
+                        // export settings
+                        n_fps: this.n_fps,
+                        n_scl_x__target: this.n_scl_x__target,
+                        n_cnt__color: this.n_cnt__color,
+                        s_dither: this.s_dither,
+                        n_cnt__loop: this.n_cnt__loop,
+                        n_ratio__speed: this.n_ratio__speed,
+                        n_bytes__max: this.n_bytes__max * 1024 * 1024,
                     })
                 );
                 if(o_resp.s_error){
                     throw new Error(o_resp.s_error);
                 }
                 let v_result = o_resp.v_result;
+                // store result and show preview
+                let n_scl_x__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_x || 480; }));
+                let n_scl_y__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_y || 320; }));
+                if(this.n_scl_x__target > 0){
+                    let n_ratio__aspect = n_scl_y__max / n_scl_x__max;
+                    n_scl_x__max = this.n_scl_x__target;
+                    n_scl_y__max = Math.round(this.n_scl_x__target * n_ratio__aspect);
+                }
+                v_result.n_scl_x = n_scl_x__max;
+                v_result.n_scl_y = n_scl_y__max;
+                v_result.n_ms_duration = this.a_o_section.reduce(function(n, o){ return n + o.n_ms_duration; }, 0);
+                this.o_result__export = v_result;
+                this.b_preview = true;
                 let n_mb = (v_result.n_bytes / 1024 / 1024).toFixed(1);
-                let s_msg = 'GIF exported: ' + v_result.s_path_output + ' (' + n_mb + ' MB, ' + v_result.n_fps + ' fps)';
-                if(v_result.n_bytes > 20 * 1024 * 1024){
-                    s_msg += ' — WARNING: still over 20 MB, try smaller crop or shorter sections';
+                let n_bytes__limit = this.n_bytes__max * 1024 * 1024;
+                let s_msg = 'GIF exported: ' + n_mb + ' MB, ' + v_result.n_fps + ' fps';
+                if(v_result.n_bytes > n_bytes__limit){
+                    s_msg += ' — WARNING: still over ' + this.n_bytes__max + ' MB limit';
                 }
                 o_state.a_o_logmsg.push(
-                    f_o_logmsg(s_msg, false, true, v_result.n_bytes > 20 * 1024 * 1024 ? s_o_logmsg_s_type__error : s_o_logmsg_s_type__info, Date.now(), 15000)
+                    f_o_logmsg(s_msg, false, true, v_result.n_bytes > n_bytes__limit ? s_o_logmsg_s_type__error : s_o_logmsg_s_type__info, Date.now(), 15000)
                 );
             } catch(o_err) {
                 o_state.a_o_logmsg.push(

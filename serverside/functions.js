@@ -152,6 +152,15 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
     let s_path_dir__export = v_data.s_path_dir__export || null;
     let s_name__composition = v_data.s_name__composition || null;
 
+    // export settings with defaults
+    let n_fps = v_data.n_fps || 15;
+    let n_scl_x__target = v_data.n_scl_x__target || 0; // 0 = original
+    let n_cnt__color = v_data.n_cnt__color || 256;
+    let s_dither = v_data.s_dither || 'bayer';
+    let n_cnt__loop = (v_data.n_cnt__loop !== undefined) ? v_data.n_cnt__loop : 0;
+    let n_ratio__speed = v_data.n_ratio__speed || 1.0;
+    let n_bytes__max = v_data.n_bytes__max || (20 * 1024 * 1024);
+
     if(!s_path_video || !a_o_section || a_o_section.length === 0){
         throw new Error('s_path_video and a_o_section are required');
     }
@@ -200,6 +209,10 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         // trim segment, crop to section rectangle
         let s_filter = `[0:v]trim=start=${n_sec_start}:duration=${n_sec_duration},setpts=PTS-STARTPTS`;
         s_filter += `,crop=${n_scl_x}:${n_scl_y}:${n_trn_x}:${n_trn_y}`;
+        // speed adjustment: setpts=PTS/speed
+        if(n_ratio__speed !== 1.0){
+            s_filter += `,setpts=PTS/${n_ratio__speed}`;
+        }
         // pad to output canvas centered with black background
         if(n_scl_x !== n_scl_x__output || n_scl_y !== n_scl_y__output){
             let n_pad_x = Math.floor((n_scl_x__output - n_scl_x) / 2);
@@ -211,27 +224,48 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         a_s_filter_scaled.push(`[v${n_idx}]`);
     }
 
-    let n_bytes__max = 20 * 1024 * 1024; // 20 MB
-    let a_n_fps = [15, 12, 10, 8, 6, 4];
+    // dither options
+    let s_dither_opt = (s_dither === 'none')
+        ? 'dither=none'
+        : (s_dither === 'floyd_steinberg')
+            ? 'dither=floyd_steinberg'
+            : 'dither=bayer:bayer_scale=5';
+
+    // scale filter (after concat, before palette)
+    let s_scale = '';
+    if(n_scl_x__target > 0){
+        s_scale = `,scale=${n_scl_x__target}:-1:flags=lanczos`;
+    }
+
+    // build fallback fps chain from requested fps down to 4
+    let a_n_fps = [n_fps];
+    for(let n of [12, 10, 8, 6, 4]){
+        if(n < n_fps && a_n_fps.indexOf(n) === -1) a_n_fps.push(n);
+    }
+
     let n_bytes__result = 0;
     let n_fps__used = a_n_fps[0];
 
     for(let n_attempt = 0; n_attempt < a_n_fps.length; n_attempt++){
-        let n_fps = a_n_fps[n_attempt];
-        n_fps__used = n_fps;
-        let s_fps_filter = `,fps=${n_fps}`;
-        let s_concat = a_s_filter_scaled.join('') + `concat=n=${a_o_section.length}:v=1:a=0${s_fps_filter},split[s0][s1];[s0]palettegen=max_colors=256:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5`;
+        let n_fps__cur = a_n_fps[n_attempt];
+        n_fps__used = n_fps__cur;
+        let s_concat = a_s_filter_scaled.join('')
+            + `concat=n=${a_o_section.length}:v=1:a=0`
+            + `,fps=${n_fps__cur}`
+            + s_scale
+            + `,split[s0][s1];[s0]palettegen=max_colors=${n_cnt__color}:stats_mode=diff[p];[s1][p]paletteuse=${s_dither_opt}`;
         let s_filter_complex = a_s_filter_input.join(';') + ';' + s_concat;
 
         let a_s_arg = [
             '-y',
             '-i', s_path_video,
             '-filter_complex', s_filter_complex,
+            '-loop', String(n_cnt__loop),
             '-f', 'gif',
             s_path_output
         ];
 
-        console.log(`ffmpeg attempt ${n_attempt + 1} (fps=${n_fps}):`, a_s_arg.join(' '));
+        console.log(`ffmpeg attempt ${n_attempt + 1} (fps=${n_fps__cur}):`, a_s_arg.join(' '));
 
         let o_command = new Deno.Command('ffmpeg', {
             args: a_s_arg,
@@ -251,7 +285,7 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         if(n_bytes__result <= n_bytes__max){
             break;
         }
-        console.log(`GIF too large: ${Math.round(n_bytes__result / 1024 / 1024)}MB > 25MB, retrying with lower fps...`);
+        console.log(`GIF too large: ${Math.round(n_bytes__result / 1024 / 1024)}MB > ${Math.round(n_bytes__max / 1024 / 1024)}MB, retrying with lower fps...`);
     }
 
     return {
