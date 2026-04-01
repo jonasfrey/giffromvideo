@@ -231,7 +231,7 @@ let o_component__videocutter = {
                                     {
                                         s_tag: 'input',
                                         type: 'range',
-                                        min: '0.25', max: '4', step: '0.25',
+                                        min: '0.25', max: '8', step: '0.25',
                                         ':value': 'n_ratio__speed',
                                         'v-on:input': 'n_ratio__speed = Number($event.target.value)',
                                     },

@@ -7,3 +7,4 @@
 2026-03-24 10:04:20 - Added 25MB GIF size limit: auto-retries with lower FPS (15→12→10→8→6→4) until under limit, shows size+fps in result
 2026-03-24 10:08:21 - Fixed sidebar panel: moved inside o_videocutter__main so toolbar stays clear, accent-colored toggle button
 2026-04-01 23:15:13 - Fix GIF export crash for videos with non-square SAR: normalize SAR before crop in ffmpeg filter chain (scale=iw*sar:ih,setsar=1)
+2026-04-01 23:24:10 - Increased max GIF speed slider from 4x to 8x
