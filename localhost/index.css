@@ -596,6 +596,39 @@ main {
     border-left: 2px solid var(--c-accent);
     border-right: 2px solid var(--c-accent);
     z-index: 1;
+    display: flex;
+    flex-direction: row;
+}
+.o_videocutter__section--active {
+    z-index: 2;
+    border-color: var(--c-accent-bright, #a78bfa);
+}
+.o_videocutter__section__handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: ew-resize;
+    z-index: 2;
+}
+.o_videocutter__section__handle--left {
+    left: -4px;
+}
+.o_videocutter__section__handle--right {
+    right: -4px;
+}
+.o_videocutter__section__handle:hover,
+.o_videocutter__section__handle:active {
+    background: rgba(167, 139, 250, 0.4);
+}
+.o_videocutter__section__body {
+    flex: 1;
+    cursor: grab;
+    min-width: 0;
+    position: relative;
+}
+.o_videocutter__section__body:active {
+    cursor: grabbing;
 }
 
 .o_videocutter__section--pending {

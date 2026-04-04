@@ -390,18 +390,39 @@ let o_component__videocutter = {
                         class: 'o_videocutter__timeline',
                         ref: 'el_timeline',
                         'v-on:click': 'f_click_timeline($event)',
+                        'v-on:mousemove': 'f_mousemove_timeline($event)',
+                        'v-on:mouseup': 'f_mouseup_timeline($event)',
+                        'v-on:mouseleave': 'f_mouseup_timeline($event)',
                         a_o: [
                             // section markers
                             {
                                 s_tag: 'div',
                                 'v-for': '(o_section, n_idx) in a_o_section',
                                 class: 'o_videocutter__section',
+                                ':class': '{ "o_videocutter__section--active": n_idx === n_idx__section_selected }',
                                 ':style': 'f_s_style_section(o_section)',
                                 a_o: [
                                     {
                                         s_tag: 'div',
-                                        class: 'o_videocutter__section__label',
-                                        innerText: '{{ n_idx + 1 }}',
+                                        class: 'o_videocutter__section__handle o_videocutter__section__handle--left',
+                                        'v-on:mousedown.stop': 'f_mousedown_timeline_handle($event, n_idx, "start")',
+                                    },
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__section__body',
+                                        'v-on:mousedown.stop': 'f_mousedown_timeline_section($event, n_idx)',
+                                        a_o: [
+                                            {
+                                                s_tag: 'div',
+                                                class: 'o_videocutter__section__label',
+                                                innerText: '{{ n_idx + 1 }}',
+                                            },
+                                        ],
+                                    },
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__section__handle o_videocutter__section__handle--right',
+                                        'v-on:mousedown.stop': 'f_mousedown_timeline_handle($event, n_idx, "end")',
                                     },
                                 ],
                             },
@@ -610,6 +631,12 @@ let o_component__videocutter = {
             n_drag_trn_y__start: 0,
             n_drag_scl_x__start: 0,
             n_drag_scl_y__start: 0,
+            // timeline section drag state
+            s_timeline_drag_mode: null, // null | 'move' | 'start' | 'end'
+            n_idx__section_dragging: -1,
+            n_drag_x__timeline_start: 0,
+            n_ms_start__drag_original: 0,
+            n_ms_duration__drag_original: 0,
             // export settings
             b_settings: false,
             b_setting__advanced: false,
@@ -777,6 +804,8 @@ let o_component__videocutter = {
         },
         // timeline
         f_click_timeline: function(o_evt) {
+            // don't seek if we just finished a drag
+            if(this.s_timeline_drag_mode) return;
             let el_timeline = this.$refs.el_timeline;
             let el_video = this.$refs.el_video;
             if(!el_timeline || !el_video) return;
@@ -799,6 +828,61 @@ let o_component__videocutter = {
             let n_width = ((this.n_ms_current - this.o_section__pending.n_ms_start) / this.n_ms_duration) * 100;
             if(n_width < 0) n_width = 0;
             return 'left: ' + n_left + '%; width: ' + n_width + '%;';
+        },
+        // timeline section drag: move whole section
+        f_mousedown_timeline_section: function(o_evt, n_idx) {
+            let el_timeline = this.$refs.el_timeline;
+            if(!el_timeline) return;
+            this.s_timeline_drag_mode = 'move';
+            this.n_idx__section_dragging = n_idx;
+            this.n_drag_x__timeline_start = o_evt.clientX;
+            this.n_ms_start__drag_original = this.a_o_section[n_idx].n_ms_start;
+            this.n_ms_duration__drag_original = this.a_o_section[n_idx].n_ms_duration;
+            this.n_idx__section_selected = n_idx;
+        },
+        // timeline section drag: resize start or end handle
+        f_mousedown_timeline_handle: function(o_evt, n_idx, s_edge) {
+            let el_timeline = this.$refs.el_timeline;
+            if(!el_timeline) return;
+            this.s_timeline_drag_mode = s_edge; // 'start' or 'end'
+            this.n_idx__section_dragging = n_idx;
+            this.n_drag_x__timeline_start = o_evt.clientX;
+            this.n_ms_start__drag_original = this.a_o_section[n_idx].n_ms_start;
+            this.n_ms_duration__drag_original = this.a_o_section[n_idx].n_ms_duration;
+            this.n_idx__section_selected = n_idx;
+        },
+        f_mousemove_timeline: function(o_evt) {
+            if(!this.s_timeline_drag_mode) return;
+            let el_timeline = this.$refs.el_timeline;
+            if(!el_timeline) return;
+            let n_px_per_ms = el_timeline.getBoundingClientRect().width / this.n_ms_duration;
+            let n_dx_px = o_evt.clientX - this.n_drag_x__timeline_start;
+            let n_dx_ms = n_dx_px / n_px_per_ms;
+            let o_section = this.a_o_section[this.n_idx__section_dragging];
+            if(!o_section) return;
+            let n_ms_min_duration = 100; // minimum section duration
+            if(this.s_timeline_drag_mode === 'move'){
+                let n_ms_new_start = this.n_ms_start__drag_original + n_dx_ms;
+                // clamp to timeline bounds
+                n_ms_new_start = Math.max(0, Math.min(n_ms_new_start, this.n_ms_duration - o_section.n_ms_duration));
+                o_section.n_ms_start = Math.round(n_ms_new_start);
+            } else if(this.s_timeline_drag_mode === 'start'){
+                let n_ms_new_start = this.n_ms_start__drag_original + n_dx_ms;
+                let n_ms_end = this.n_ms_start__drag_original + this.n_ms_duration__drag_original;
+                // clamp: can't go before 0 or past (end - min_duration)
+                n_ms_new_start = Math.max(0, Math.min(n_ms_new_start, n_ms_end - n_ms_min_duration));
+                o_section.n_ms_start = Math.round(n_ms_new_start);
+                o_section.n_ms_duration = Math.round(n_ms_end - n_ms_new_start);
+            } else if(this.s_timeline_drag_mode === 'end'){
+                let n_ms_new_duration = this.n_ms_duration__drag_original + n_dx_ms;
+                // clamp: min duration, and can't exceed video length
+                n_ms_new_duration = Math.max(n_ms_min_duration, Math.min(n_ms_new_duration, this.n_ms_duration - o_section.n_ms_start));
+                o_section.n_ms_duration = Math.round(n_ms_new_duration);
+            }
+        },
+        f_mouseup_timeline: function() {
+            this.s_timeline_drag_mode = null;
+            this.n_idx__section_dragging = -1;
         },
         // crop rectangle overlay
         f_o_video_render_area: function() {
