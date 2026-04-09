@@ -501,6 +501,11 @@ main {
     font-weight: 600;
 }
 
+.o_videocutter__btn--active {
+    background: var(--c-accent);
+    color: var(--c-bg);
+}
+
 .o_videocutter__btn--delete {
     padding: 0.15rem 0.5rem;
     color: var(--c-danger);

@@ -5,7 +5,7 @@
 
 import { s_ds } from './runtimedata.js';
 import { s_db_create, s_db_read, s_db_update, s_db_delete } from '../localhost/runtimedata.js';
-import { a_o_wsmsg, f_o_model_instance, f_s_name_table__from_o_model, o_model__o_fsnode, o_model__o_utterance, o_wsmsg__deno_copy_file, o_wsmsg__deno_mkdir, o_wsmsg__deno_stat, o_wsmsg__f_a_o_fsnode, o_wsmsg__f_delete_table_data, o_wsmsg__f_v_crud__indb, o_wsmsg__logmsg, o_wsmsg__set_state_data, o_wsmsg__syncdata, o_wsmsg__export_gif } from '../localhost/constructors.js';
+import { a_o_wsmsg, f_o_model_instance, f_s_name_table__from_o_model, o_model__o_fsnode, o_model__o_utterance, o_wsmsg__deno_copy_file, o_wsmsg__deno_mkdir, o_wsmsg__deno_stat, o_wsmsg__f_a_o_fsnode, o_wsmsg__f_delete_table_data, o_wsmsg__f_v_crud__indb, o_wsmsg__logmsg, o_wsmsg__set_state_data, o_wsmsg__syncdata, o_wsmsg__export_gif, o_wsmsg__export_video } from '../localhost/constructors.js';
 import { f_v_crud__indb, f_db_delete_table_data } from './database_functions.js';
 import { f_o_uttdatainfo } from './cli_functions.js';
 
@@ -293,6 +293,163 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         s_path_output,
         n_bytes: n_bytes__result,
         n_fps: n_fps__used,
+        s_status: 'complete',
+    };
+};
+
+// ffmpeg export: concatenate video sections into a single MP4 video
+o_wsmsg__export_video.f_v_server_implementation = async function(o_wsmsg){
+    let v_data = o_wsmsg.v_data;
+    let s_path_video = v_data.s_path_video;
+    let a_o_section = v_data.a_o_section;
+    let s_path_dir__export = v_data.s_path_dir__export || null;
+    let s_name__composition = v_data.s_name__composition || null;
+
+    // export settings with defaults
+    let n_fps = v_data.n_fps || 30;
+    let n_scl_x__target = v_data.n_scl_x__target || 0; // 0 = original
+    let n_ratio__speed = v_data.n_ratio__speed || 1.0;
+    let n_crf = (v_data.n_crf !== undefined) ? v_data.n_crf : 23;
+    let b_audio = (v_data.b_audio !== undefined) ? v_data.b_audio : false;
+
+    if(!s_path_video || !a_o_section || a_o_section.length === 0){
+        throw new Error('s_path_video and a_o_section are required');
+    }
+
+    // determine output path
+    let s_path_output = v_data.s_path_output;
+    if(!s_path_output){
+        let s_filename = s_path_video.split(s_ds).pop().replace(/\.[^.]+$/, '');
+        if(s_name__composition){
+            s_filename = s_name__composition.replace(/[^a-zA-Z0-9_\-]/g, '_');
+        }
+        if(s_path_dir__export){
+            try { await Deno.mkdir(s_path_dir__export, { recursive: true }); } catch {}
+            s_path_output = s_path_dir__export + s_ds + s_filename + '.mp4';
+        } else {
+            s_path_output = s_path_video.replace(/\.[^.]+$/, '_export.mp4');
+        }
+    }
+
+    // build ffmpeg filter_complex: trim each section, crop, pad centered on max canvas, concat
+    let a_s_filter_input = [];
+    let a_s_filter_scaled = [];
+    let n_scl_x__output = 0;
+    let n_scl_y__output = 0;
+    for(let n_idx = 0; n_idx < a_o_section.length; n_idx++){
+        let n_scl_x = a_o_section[n_idx].n_scl_x || 480;
+        let n_scl_y = a_o_section[n_idx].n_scl_y || 320;
+        if(n_scl_x > n_scl_x__output) n_scl_x__output = n_scl_x;
+        if(n_scl_y > n_scl_y__output) n_scl_y__output = n_scl_y;
+    }
+    // ensure even dimensions for codec compatibility
+    n_scl_x__output = Math.ceil(n_scl_x__output / 2) * 2;
+    n_scl_y__output = Math.ceil(n_scl_y__output / 2) * 2;
+
+    // build video filter chains
+    for(let n_idx = 0; n_idx < a_o_section.length; n_idx++){
+        let o_section = a_o_section[n_idx];
+        let n_sec_start = o_section.n_ms_start / 1000;
+        let n_sec_duration = o_section.n_ms_duration / 1000;
+        let n_scl_x = o_section.n_scl_x || n_scl_x__output;
+        let n_scl_y = o_section.n_scl_y || n_scl_y__output;
+        let n_trn_x = o_section.n_trn_x || 0;
+        let n_trn_y = o_section.n_trn_y || 0;
+
+        let s_filter = `[0:v]trim=start=${n_sec_start}:duration=${n_sec_duration},setpts=PTS-STARTPTS`;
+        s_filter += `,scale=iw*sar:ih,setsar=1`;
+        s_filter += `,crop=${n_scl_x}:${n_scl_y}:${n_trn_x}:${n_trn_y}`;
+        if(n_ratio__speed !== 1.0){
+            s_filter += `,setpts=PTS/${n_ratio__speed}`;
+        }
+        if(n_scl_x !== n_scl_x__output || n_scl_y !== n_scl_y__output){
+            let n_pad_x = Math.floor((n_scl_x__output - n_scl_x) / 2);
+            let n_pad_y = Math.floor((n_scl_y__output - n_scl_y) / 2);
+            s_filter += `,pad=${n_scl_x__output}:${n_scl_y__output}:${n_pad_x}:${n_pad_y}:black`;
+        }
+        s_filter += `[v${n_idx}]`;
+        a_s_filter_input.push(s_filter);
+        a_s_filter_scaled.push(`[v${n_idx}]`);
+    }
+
+    // build audio filter chains if audio is enabled
+    let a_s_filter_audio = [];
+    let a_s_filter_audio_label = [];
+    if(b_audio){
+        for(let n_idx = 0; n_idx < a_o_section.length; n_idx++){
+            let o_section = a_o_section[n_idx];
+            let n_sec_start = o_section.n_ms_start / 1000;
+            let n_sec_duration = o_section.n_ms_duration / 1000;
+            let s_filter_a = `[0:a]atrim=start=${n_sec_start}:duration=${n_sec_duration},asetpts=PTS-STARTPTS`;
+            if(n_ratio__speed !== 1.0){
+                s_filter_a += `,atempo=${n_ratio__speed}`;
+            }
+            s_filter_a += `[a${n_idx}]`;
+            a_s_filter_audio.push(s_filter_a);
+            a_s_filter_audio_label.push(`[a${n_idx}]`);
+        }
+    }
+
+    // scale filter
+    let s_scale = '';
+    if(n_scl_x__target > 0){
+        s_scale = `,scale=${n_scl_x__target}:-2:flags=lanczos`;
+    }
+
+    // concat video
+    let n_cnt__section = a_o_section.length;
+    let s_concat_video = a_s_filter_scaled.join('')
+        + `concat=n=${n_cnt__section}:v=1:a=0`
+        + `,fps=${n_fps}`
+        + s_scale
+        + `[vout]`;
+
+    let s_filter_complex = a_s_filter_input.join(';') + ';' + s_concat_video;
+
+    // concat audio if enabled
+    let a_s_map = ['-map', '[vout]'];
+    if(b_audio && a_s_filter_audio.length > 0){
+        let s_concat_audio = a_s_filter_audio_label.join('')
+            + `concat=n=${n_cnt__section}:v=0:a=1[aout]`;
+        s_filter_complex += ';' + a_s_filter_audio.join(';') + ';' + s_concat_audio;
+        a_s_map.push('-map', '[aout]');
+    }
+
+    let a_s_arg = [
+        '-y',
+        '-i', s_path_video,
+        '-filter_complex', s_filter_complex,
+        ...a_s_map,
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', String(n_crf),
+        '-movflags', '+faststart',
+    ];
+    if(b_audio){
+        a_s_arg.push('-c:a', 'aac', '-b:a', '128k');
+    }
+    a_s_arg.push(s_path_output);
+
+    console.log('ffmpeg video export:', a_s_arg.join(' '));
+
+    let o_command = new Deno.Command('ffmpeg', {
+        args: a_s_arg,
+        stdout: 'piped',
+        stderr: 'piped',
+    });
+    let o_process = await o_command.output();
+    let s_stderr = new TextDecoder().decode(o_process.stderr);
+
+    if(!o_process.success){
+        throw new Error('ffmpeg failed: ' + s_stderr);
+    }
+
+    let o_stat = await Deno.stat(s_path_output);
+
+    return {
+        s_path_output,
+        n_bytes: o_stat.size,
+        n_fps: n_fps,
         s_status: 'complete',
     };
 };

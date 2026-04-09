@@ -181,6 +181,7 @@ let o_wsmsg__set_state_data = f_o_wsmsg_def('set_state_data', false);
 let o_wsmsg__utterance = f_o_wsmsg_def('utterance', false);
 let o_wsmsg__syncdata = f_o_wsmsg_def('syncdata', true);
 let o_wsmsg__export_gif = f_o_wsmsg_def('export_gif', true);
+let o_wsmsg__export_video = f_o_wsmsg_def('export_video', true);
 
 // client implementations
 o_wsmsg__logmsg.f_v_client_implementation = function(o_wsmsg, o_wsmsg__existing, o_state){
@@ -233,6 +234,7 @@ let a_o_wsmsg = [
     o_wsmsg__utterance,
     o_wsmsg__syncdata,
     o_wsmsg__export_gif,
+    o_wsmsg__export_video,
 ]
 
 export {
@@ -272,6 +274,7 @@ export {
     o_wsmsg__utterance,
     o_wsmsg__syncdata,
     o_wsmsg__export_gif,
+    o_wsmsg__export_video,
     f_o_wsmsg,
     f_o_wsmsg_def,
     s_o_logmsg_s_type__log,

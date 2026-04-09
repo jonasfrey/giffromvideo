@@ -5,6 +5,7 @@ import { f_send_wsmsg_with_response, o_wsmsg__syncdata, o_state } from './index.
 import {
     f_o_wsmsg,
     o_wsmsg__export_gif,
+    o_wsmsg__export_video,
     f_o_logmsg,
     s_o_logmsg_s_type__info,
     s_o_logmsg_s_type__error,
@@ -127,8 +128,8 @@ let o_component__videocutter = {
                                 s_tag: 'div',
                                 class: 'interactable o_videocutter__btn o_videocutter__btn--export',
                                 ':class': "{ disabled: a_o_section.length === 0 || b_exporting }",
-                                'v-on:click': 'f_export_gif',
-                                innerText: "{{ b_exporting ? 'Exporting...' : 'Export GIF' }}",
+                                'v-on:click': 'f_export',
+                                innerText: "{{ b_exporting ? 'Exporting...' : (s_format__export === 'gif' ? 'Export GIF' : 'Export Video') }}",
                             },
                             {
                                 s_tag: 'div',
@@ -150,9 +151,42 @@ let o_component__videocutter = {
                         'v-if': 'b_settings',
                         class: 'o_videocutter__settings',
                         a_o: [
-                            // presets row
+                            // format toggle
                             {
                                 s_tag: 'div',
+                                class: 'o_videocutter__settings__row',
+                                a_o: [
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__label',
+                                        innerText: 'Format',
+                                    },
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__preset',
+                                        a_o: [
+                                            {
+                                                s_tag: 'div',
+                                                class: 'interactable o_videocutter__btn',
+                                                ':class': "{ 'o_videocutter__btn--active': s_format__export === 'gif' }",
+                                                'v-on:click': "s_format__export = 'gif'",
+                                                innerText: 'GIF',
+                                            },
+                                            {
+                                                s_tag: 'div',
+                                                class: 'interactable o_videocutter__btn',
+                                                ':class': "{ 'o_videocutter__btn--active': s_format__export === 'video' }",
+                                                'v-on:click': "s_format__export = 'video'",
+                                                innerText: 'Video (MP4)',
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                            // presets row (GIF only)
+                            {
+                                s_tag: 'div',
+                                'v-if': "s_format__export === 'gif'",
                                 class: 'o_videocutter__settings__row',
                                 a_o: [
                                     {
@@ -238,23 +272,64 @@ let o_component__videocutter = {
                                     { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_ratio__speed }}x' },
                                 ],
                             },
-                            // estimate
+                            // estimate (GIF only)
                             {
                                 s_tag: 'div',
+                                'v-if': "s_format__export === 'gif'",
                                 class: 'o_videocutter__settings__estimate',
                                 innerText: "{{ '~' + (n_bytes__estimate / 1024 / 1024).toFixed(1) + ' MB estimated' }}",
                             },
-                            // advanced toggle
+                            // video-specific settings
                             {
                                 s_tag: 'div',
+                                'v-if': "s_format__export === 'video'",
+                                class: 'o_videocutter__settings__advanced',
+                                a_o: [
+                                    // CRF (quality)
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Quality (CRF)' },
+                                            {
+                                                s_tag: 'input',
+                                                type: 'range',
+                                                min: '0', max: '51', step: '1',
+                                                ':value': 'n_crf',
+                                                'v-on:input': 'n_crf = Number($event.target.value)',
+                                            },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: "{{ n_crf + (n_crf <= 18 ? ' (high)' : n_crf <= 28 ? ' (medium)' : ' (low)') }}" },
+                                        ],
+                                    },
+                                    // audio toggle
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Audio' },
+                                            {
+                                                s_tag: 'input',
+                                                type: 'checkbox',
+                                                ':checked': 'b_audio',
+                                                'v-on:change': 'b_audio = $event.target.checked',
+                                            },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: "{{ b_audio ? 'Included' : 'No audio' }}" },
+                                        ],
+                                    },
+                                ],
+                            },
+                            // advanced toggle (GIF only)
+                            {
+                                s_tag: 'div',
+                                'v-if': "s_format__export === 'gif'",
                                 class: 'interactable o_videocutter__settings__toggle',
                                 'v-on:click': 'b_setting__advanced = !b_setting__advanced',
                                 innerText: "{{ b_setting__advanced ? 'Hide Advanced' : 'Show Advanced' }}",
                             },
-                            // advanced settings
+                            // advanced settings (GIF only)
                             {
                                 s_tag: 'div',
-                                'v-if': 'b_setting__advanced',
+                                'v-if': "b_setting__advanced && s_format__export === 'gif'",
                                 class: 'o_videocutter__settings__advanced',
                                 a_o: [
                                     // colors
@@ -537,8 +612,18 @@ let o_component__videocutter = {
                                 a_o: [
                                     {
                                         s_tag: 'img',
+                                        'v-if': "o_result__export.s_format === 'gif'",
                                         ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.s_path_output) + '&t=' + Date.now()",
                                         class: 'o_videocutter__preview__gif',
+                                    },
+                                    {
+                                        s_tag: 'video',
+                                        'v-if': "o_result__export.s_format === 'video'",
+                                        ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.s_path_output) + '&t=' + Date.now()",
+                                        class: 'o_videocutter__preview__gif',
+                                        controls: true,
+                                        autoplay: true,
+                                        loop: true,
                                     },
                                     {
                                         s_tag: 'div',
@@ -638,6 +723,7 @@ let o_component__videocutter = {
             n_ms_start__drag_original: 0,
             n_ms_duration__drag_original: 0,
             // export settings
+            s_format__export: 'gif',   // 'gif' or 'video'
             b_settings: false,
             b_setting__advanced: false,
             n_fps: 15,
@@ -647,6 +733,9 @@ let o_component__videocutter = {
             n_cnt__loop: 0,            // 0 = infinite
             n_ratio__speed: 1.0,
             n_bytes__max: 20,          // MB
+            // video-specific settings
+            n_crf: 23,
+            b_audio: false,
             // preview
             b_preview: false,
             o_result__export: null,    // {s_path_output, n_bytes, n_fps, n_scl_x, n_scl_y, n_ms_duration}
@@ -1079,6 +1168,64 @@ let o_component__videocutter = {
             }
         },
         // export
+        f_export: function() {
+            if(this.s_format__export === 'video'){
+                this.f_export_video();
+            } else {
+                this.f_export_gif();
+            }
+        },
+        f_export_video: async function() {
+            if(this.a_o_section.length === 0 || this.b_exporting) return;
+            this.b_exporting = true;
+            o_state.a_o_logmsg.push(
+                f_o_logmsg('Starting video export...', false, true, s_o_logmsg_s_type__info, Date.now(), 10000)
+            );
+            try {
+                if(this.s_name__composition){
+                    await this.f_save_composition();
+                }
+                let o_resp = await f_send_wsmsg_with_response(
+                    f_o_wsmsg(o_wsmsg__export_video.s_name, {
+                        s_path_video: this.s_path_video,
+                        a_o_section: this.a_o_section,
+                        s_path_dir__export: this.s_path_dir__export,
+                        s_name__composition: this.s_name__composition || null,
+                        n_fps: this.n_fps,
+                        n_scl_x__target: this.n_scl_x__target,
+                        n_ratio__speed: this.n_ratio__speed,
+                        n_crf: this.n_crf,
+                        b_audio: this.b_audio,
+                    })
+                );
+                if(o_resp.s_error){
+                    throw new Error(o_resp.s_error);
+                }
+                let v_result = o_resp.v_result;
+                let n_scl_x__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_x || 480; }));
+                let n_scl_y__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_y || 320; }));
+                if(this.n_scl_x__target > 0){
+                    let n_ratio__aspect = n_scl_y__max / n_scl_x__max;
+                    n_scl_x__max = this.n_scl_x__target;
+                    n_scl_y__max = Math.round(this.n_scl_x__target * n_ratio__aspect);
+                }
+                v_result.n_scl_x = n_scl_x__max;
+                v_result.n_scl_y = n_scl_y__max;
+                v_result.n_ms_duration = this.a_o_section.reduce(function(n, o){ return n + o.n_ms_duration; }, 0);
+                v_result.s_format = 'video';
+                this.o_result__export = v_result;
+                this.b_preview = true;
+                let n_mb = (v_result.n_bytes / 1024 / 1024).toFixed(1);
+                o_state.a_o_logmsg.push(
+                    f_o_logmsg('Video exported: ' + n_mb + ' MB, ' + v_result.n_fps + ' fps', false, true, s_o_logmsg_s_type__info, Date.now(), 15000)
+                );
+            } catch(o_err) {
+                o_state.a_o_logmsg.push(
+                    f_o_logmsg('Export failed: ' + o_err.message, false, true, s_o_logmsg_s_type__error, Date.now(), 10000)
+                );
+            }
+            this.b_exporting = false;
+        },
         f_export_gif: async function() {
             if(this.a_o_section.length === 0 || this.b_exporting) return;
             this.b_exporting = true;
@@ -1121,6 +1268,7 @@ let o_component__videocutter = {
                 v_result.n_scl_x = n_scl_x__max;
                 v_result.n_scl_y = n_scl_y__max;
                 v_result.n_ms_duration = this.a_o_section.reduce(function(n, o){ return n + o.n_ms_duration; }, 0);
+                v_result.s_format = 'gif';
                 this.o_result__export = v_result;
                 this.b_preview = true;
                 let n_mb = (v_result.n_bytes / 1024 / 1024).toFixed(1);
