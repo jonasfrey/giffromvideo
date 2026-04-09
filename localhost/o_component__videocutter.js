@@ -129,7 +129,7 @@ let o_component__videocutter = {
                                 class: 'interactable o_videocutter__btn o_videocutter__btn--export',
                                 ':class': "{ disabled: a_o_section.length === 0 || b_exporting }",
                                 'v-on:click': 'f_export',
-                                innerText: "{{ b_exporting ? 'Exporting...' : (s_format__export === 'gif' ? 'Export GIF' : 'Export Video') }}",
+                                innerText: "{{ b_exporting ? 'Exporting...' : 'Export' }}",
                             },
                             {
                                 s_tag: 'div',
@@ -151,39 +151,7 @@ let o_component__videocutter = {
                         'v-if': 'b_settings',
                         class: 'o_videocutter__settings',
                         a_o: [
-                            // format toggle
-                            {
-                                s_tag: 'div',
-                                class: 'o_videocutter__settings__row',
-                                a_o: [
-                                    {
-                                        s_tag: 'div',
-                                        class: 'o_videocutter__settings__label',
-                                        innerText: 'Format',
-                                    },
-                                    {
-                                        s_tag: 'div',
-                                        class: 'o_videocutter__settings__preset',
-                                        a_o: [
-                                            {
-                                                s_tag: 'div',
-                                                class: 'interactable o_videocutter__btn',
-                                                ':class': "{ 'o_videocutter__btn--active': s_format__export === 'gif' }",
-                                                'v-on:click': "s_format__export = 'gif'",
-                                                innerText: 'GIF',
-                                            },
-                                            {
-                                                s_tag: 'div',
-                                                class: 'interactable o_videocutter__btn',
-                                                ':class': "{ 'o_videocutter__btn--active': s_format__export === 'video' }",
-                                                'v-on:click': "s_format__export = 'video'",
-                                                innerText: 'Video (MP4)',
-                                            },
-                                        ],
-                                    },
-                                ],
-                            },
-                            // presets row (GIF only)
+                            // presets row
                             {
                                 s_tag: 'div',
                                 'v-if': "s_format__export === 'gif'",
@@ -272,64 +240,23 @@ let o_component__videocutter = {
                                     { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_ratio__speed }}x' },
                                 ],
                             },
-                            // estimate (GIF only)
+                            // estimate
                             {
                                 s_tag: 'div',
-                                'v-if': "s_format__export === 'gif'",
                                 class: 'o_videocutter__settings__estimate',
                                 innerText: "{{ '~' + (n_bytes__estimate / 1024 / 1024).toFixed(1) + ' MB estimated' }}",
                             },
-                            // video-specific settings
+                            // advanced toggle
                             {
                                 s_tag: 'div',
-                                'v-if': "s_format__export === 'video'",
-                                class: 'o_videocutter__settings__advanced',
-                                a_o: [
-                                    // CRF (quality)
-                                    {
-                                        s_tag: 'div',
-                                        class: 'o_videocutter__settings__row',
-                                        a_o: [
-                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Quality (CRF)' },
-                                            {
-                                                s_tag: 'input',
-                                                type: 'range',
-                                                min: '0', max: '51', step: '1',
-                                                ':value': 'n_crf',
-                                                'v-on:input': 'n_crf = Number($event.target.value)',
-                                            },
-                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: "{{ n_crf + (n_crf <= 18 ? ' (high)' : n_crf <= 28 ? ' (medium)' : ' (low)') }}" },
-                                        ],
-                                    },
-                                    // audio toggle
-                                    {
-                                        s_tag: 'div',
-                                        class: 'o_videocutter__settings__row',
-                                        a_o: [
-                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Audio' },
-                                            {
-                                                s_tag: 'input',
-                                                type: 'checkbox',
-                                                ':checked': 'b_audio',
-                                                'v-on:change': 'b_audio = $event.target.checked',
-                                            },
-                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: "{{ b_audio ? 'Included' : 'No audio' }}" },
-                                        ],
-                                    },
-                                ],
-                            },
-                            // advanced toggle (GIF only)
-                            {
-                                s_tag: 'div',
-                                'v-if': "s_format__export === 'gif'",
                                 class: 'interactable o_videocutter__settings__toggle',
                                 'v-on:click': 'b_setting__advanced = !b_setting__advanced',
                                 innerText: "{{ b_setting__advanced ? 'Hide Advanced' : 'Show Advanced' }}",
                             },
-                            // advanced settings (GIF only)
+                            // advanced settings
                             {
                                 s_tag: 'div',
-                                'v-if': "b_setting__advanced && s_format__export === 'gif'",
+                                'v-if': 'b_setting__advanced',
                                 class: 'o_videocutter__settings__advanced',
                                 a_o: [
                                     // colors
@@ -384,12 +311,12 @@ let o_component__videocutter = {
                                             },
                                         ],
                                     },
-                                    // max file size
+                                    // max file size (GIF)
                                     {
                                         s_tag: 'div',
                                         class: 'o_videocutter__settings__row',
                                         a_o: [
-                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Max size' },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'GIF Max size' },
                                             {
                                                 s_tag: 'input',
                                                 type: 'range',
@@ -398,6 +325,37 @@ let o_component__videocutter = {
                                                 'v-on:input': 'n_bytes__max = Number($event.target.value)',
                                             },
                                             { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_bytes__max }} MB' },
+                                        ],
+                                    },
+                                    // video quality (CRF)
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Video Quality (CRF)' },
+                                            {
+                                                s_tag: 'input',
+                                                type: 'range',
+                                                min: '0', max: '51', step: '1',
+                                                ':value': 'n_crf',
+                                                'v-on:input': 'n_crf = Number($event.target.value)',
+                                            },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: "{{ n_crf + (n_crf <= 18 ? ' (high)' : n_crf <= 28 ? ' (medium)' : ' (low)') }}" },
+                                        ],
+                                    },
+                                    // audio toggle (video)
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Video Audio' },
+                                            {
+                                                s_tag: 'input',
+                                                type: 'checkbox',
+                                                ':checked': 'b_audio',
+                                                'v-on:change': 'b_audio = $event.target.checked',
+                                            },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: "{{ b_audio ? 'Included' : 'No audio' }}" },
                                         ],
                                     },
                                 ],
@@ -583,10 +541,10 @@ let o_component__videocutter = {
                             },
                         ],
                     },
-                    // GIF preview overlay
+                    // export preview overlay
                     {
                         s_tag: 'div',
-                        'v-if': 'b_preview && o_result__export',
+                        'v-if': 'b_preview && (o_result__export || o_result__export_video)',
                         class: 'o_videocutter__preview',
                         a_o: [
                             {
@@ -606,24 +564,21 @@ let o_component__videocutter = {
                                     },
                                 ],
                             },
+                            // GIF result
                             {
                                 s_tag: 'div',
+                                'v-if': 'o_result__export',
                                 class: 'o_videocutter__preview__body',
                                 a_o: [
                                     {
-                                        s_tag: 'img',
-                                        'v-if': "o_result__export.s_format === 'gif'",
-                                        ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.s_path_output) + '&t=' + Date.now()",
-                                        class: 'o_videocutter__preview__gif',
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__preview__title',
+                                        innerText: 'GIF',
                                     },
                                     {
-                                        s_tag: 'video',
-                                        'v-if': "o_result__export.s_format === 'video'",
+                                        s_tag: 'img',
                                         ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.s_path_output) + '&t=' + Date.now()",
                                         class: 'o_videocutter__preview__gif',
-                                        controls: true,
-                                        autoplay: true,
-                                        loop: true,
                                     },
                                     {
                                         s_tag: 'div',
@@ -649,16 +604,51 @@ let o_component__videocutter = {
                                                 s_tag: 'div',
                                                 class: 'o_videocutter__preview__meta__row',
                                                 a_o: [
-                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Resolution' },
-                                                    { s_tag: 'div', innerText: "{{ o_result__export.n_scl_x + 'x' + o_result__export.n_scl_y }}" },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Path' },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__path', innerText: '{{ o_result__export.s_path_output }}' },
+                                                ],
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                            // Video result
+                            {
+                                s_tag: 'div',
+                                'v-if': 'o_result__export_video',
+                                class: 'o_videocutter__preview__body',
+                                a_o: [
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__preview__title',
+                                        innerText: 'Video (MP4)',
+                                    },
+                                    {
+                                        s_tag: 'video',
+                                        ':src': "'/api/file?path=' + encodeURIComponent(o_result__export_video.s_path_output) + '&t=' + Date.now()",
+                                        class: 'o_videocutter__preview__gif',
+                                        controls: true,
+                                        autoplay: true,
+                                        loop: true,
+                                    },
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__preview__meta',
+                                        a_o: [
+                                            {
+                                                s_tag: 'div',
+                                                class: 'o_videocutter__preview__meta__row',
+                                                a_o: [
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Size' },
+                                                    { s_tag: 'div', innerText: "{{ (o_result__export_video.n_bytes / 1024 / 1024).toFixed(2) + ' MB' }}" },
                                                 ],
                                             },
                                             {
                                                 s_tag: 'div',
                                                 class: 'o_videocutter__preview__meta__row',
                                                 a_o: [
-                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Duration' },
-                                                    { s_tag: 'div', innerText: '{{ f_s_time(o_result__export.n_ms_duration) }}' },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'FPS' },
+                                                    { s_tag: 'div', innerText: '{{ o_result__export_video.n_fps }}' },
                                                 ],
                                             },
                                             {
@@ -666,7 +656,7 @@ let o_component__videocutter = {
                                                 class: 'o_videocutter__preview__meta__row',
                                                 a_o: [
                                                     { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Path' },
-                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__path', innerText: '{{ o_result__export.s_path_output }}' },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__path', innerText: '{{ o_result__export_video.s_path_output }}' },
                                                 ],
                                             },
                                         ],
@@ -723,7 +713,6 @@ let o_component__videocutter = {
             n_ms_start__drag_original: 0,
             n_ms_duration__drag_original: 0,
             // export settings
-            s_format__export: 'gif',   // 'gif' or 'video'
             b_settings: false,
             b_setting__advanced: false,
             n_fps: 15,
@@ -738,7 +727,8 @@ let o_component__videocutter = {
             b_audio: false,
             // preview
             b_preview: false,
-            o_result__export: null,    // {s_path_output, n_bytes, n_fps, n_scl_x, n_scl_y, n_ms_duration}
+            o_result__export: null,    // GIF result {s_path_output, n_bytes, n_fps, n_scl_x, n_scl_y, n_ms_duration, s_format}
+            o_result__export_video: null, // Video result
         };
     },
     computed: {
@@ -1167,124 +1157,89 @@ let o_component__videocutter = {
                 });
             }
         },
-        // export
-        f_export: function() {
-            if(this.s_format__export === 'video'){
-                this.f_export_video();
+        // export — runs GIF and video export in parallel
+        f_export: async function() {
+            if(this.a_o_section.length === 0 || this.b_exporting) return;
+            this.b_exporting = true;
+            // save composition once before both exports
+            if(this.s_name__composition){
+                await this.f_save_composition();
+            }
+            o_state.a_o_logmsg.push(
+                f_o_logmsg('Starting GIF + Video export...', false, true, s_o_logmsg_s_type__info, Date.now(), 10000)
+            );
+            let o_self = this;
+            let o_shared = {
+                s_path_video: this.s_path_video,
+                a_o_section: this.a_o_section,
+                s_path_dir__export: this.s_path_dir__export,
+                s_name__composition: this.s_name__composition || null,
+                n_fps: this.n_fps,
+                n_scl_x__target: this.n_scl_x__target,
+                n_ratio__speed: this.n_ratio__speed,
+            };
+            let f_o_promise__gif = function(){
+                return f_send_wsmsg_with_response(
+                    f_o_wsmsg(o_wsmsg__export_gif.s_name, Object.assign({}, o_shared, {
+                        n_cnt__color: o_self.n_cnt__color,
+                        s_dither: o_self.s_dither,
+                        n_cnt__loop: o_self.n_cnt__loop,
+                        n_bytes__max: o_self.n_bytes__max * 1024 * 1024,
+                    }))
+                );
+            };
+            let f_o_promise__video = function(){
+                return f_send_wsmsg_with_response(
+                    f_o_wsmsg(o_wsmsg__export_video.s_name, Object.assign({}, o_shared, {
+                        n_crf: o_self.n_crf,
+                        b_audio: o_self.b_audio,
+                    }))
+                );
+            };
+            let a_o_result = await Promise.allSettled([f_o_promise__gif(), f_o_promise__video()]);
+            let o_result__gif = a_o_result[0];
+            let o_result__video = a_o_result[1];
+            let a_s_msg = [];
+            let n_scl_x__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_x || 480; }));
+            let n_scl_y__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_y || 320; }));
+            if(this.n_scl_x__target > 0){
+                let n_ratio__aspect = n_scl_y__max / n_scl_x__max;
+                n_scl_x__max = this.n_scl_x__target;
+                n_scl_y__max = Math.round(this.n_scl_x__target * n_ratio__aspect);
+            }
+            let n_ms_duration = this.a_o_section.reduce(function(n, o){ return n + o.n_ms_duration; }, 0);
+            // process GIF result
+            if(o_result__gif.status === 'fulfilled' && !o_result__gif.value.s_error){
+                let v = o_result__gif.value.v_result;
+                v.n_scl_x = n_scl_x__max;
+                v.n_scl_y = n_scl_y__max;
+                v.n_ms_duration = n_ms_duration;
+                v.s_format = 'gif';
+                a_s_msg.push('GIF: ' + (v.n_bytes / 1024 / 1024).toFixed(1) + ' MB');
+                // show GIF in preview by default
+                this.o_result__export = v;
+                this.b_preview = true;
             } else {
-                this.f_export_gif();
+                let s_err = (o_result__gif.status === 'rejected') ? o_result__gif.reason.message : o_result__gif.value.s_error;
+                a_s_msg.push('GIF failed: ' + s_err);
             }
-        },
-        f_export_video: async function() {
-            if(this.a_o_section.length === 0 || this.b_exporting) return;
-            this.b_exporting = true;
+            // process video result
+            if(o_result__video.status === 'fulfilled' && !o_result__video.value.s_error){
+                let v = o_result__video.value.v_result;
+                v.n_scl_x = n_scl_x__max;
+                v.n_scl_y = n_scl_y__max;
+                v.n_ms_duration = n_ms_duration;
+                v.s_format = 'video';
+                a_s_msg.push('Video: ' + (v.n_bytes / 1024 / 1024).toFixed(1) + ' MB');
+                this.o_result__export_video = v;
+            } else {
+                let s_err = (o_result__video.status === 'rejected') ? o_result__video.reason.message : o_result__video.value.s_error;
+                a_s_msg.push('Video failed: ' + s_err);
+            }
+            let b_any_error = a_s_msg.some(function(s){ return s.indexOf('failed') !== -1; });
             o_state.a_o_logmsg.push(
-                f_o_logmsg('Starting video export...', false, true, s_o_logmsg_s_type__info, Date.now(), 10000)
+                f_o_logmsg('Export done — ' + a_s_msg.join(', '), false, true, b_any_error ? s_o_logmsg_s_type__error : s_o_logmsg_s_type__info, Date.now(), 15000)
             );
-            try {
-                if(this.s_name__composition){
-                    await this.f_save_composition();
-                }
-                let o_resp = await f_send_wsmsg_with_response(
-                    f_o_wsmsg(o_wsmsg__export_video.s_name, {
-                        s_path_video: this.s_path_video,
-                        a_o_section: this.a_o_section,
-                        s_path_dir__export: this.s_path_dir__export,
-                        s_name__composition: this.s_name__composition || null,
-                        n_fps: this.n_fps,
-                        n_scl_x__target: this.n_scl_x__target,
-                        n_ratio__speed: this.n_ratio__speed,
-                        n_crf: this.n_crf,
-                        b_audio: this.b_audio,
-                    })
-                );
-                if(o_resp.s_error){
-                    throw new Error(o_resp.s_error);
-                }
-                let v_result = o_resp.v_result;
-                let n_scl_x__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_x || 480; }));
-                let n_scl_y__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_y || 320; }));
-                if(this.n_scl_x__target > 0){
-                    let n_ratio__aspect = n_scl_y__max / n_scl_x__max;
-                    n_scl_x__max = this.n_scl_x__target;
-                    n_scl_y__max = Math.round(this.n_scl_x__target * n_ratio__aspect);
-                }
-                v_result.n_scl_x = n_scl_x__max;
-                v_result.n_scl_y = n_scl_y__max;
-                v_result.n_ms_duration = this.a_o_section.reduce(function(n, o){ return n + o.n_ms_duration; }, 0);
-                v_result.s_format = 'video';
-                this.o_result__export = v_result;
-                this.b_preview = true;
-                let n_mb = (v_result.n_bytes / 1024 / 1024).toFixed(1);
-                o_state.a_o_logmsg.push(
-                    f_o_logmsg('Video exported: ' + n_mb + ' MB, ' + v_result.n_fps + ' fps', false, true, s_o_logmsg_s_type__info, Date.now(), 15000)
-                );
-            } catch(o_err) {
-                o_state.a_o_logmsg.push(
-                    f_o_logmsg('Export failed: ' + o_err.message, false, true, s_o_logmsg_s_type__error, Date.now(), 10000)
-                );
-            }
-            this.b_exporting = false;
-        },
-        f_export_gif: async function() {
-            if(this.a_o_section.length === 0 || this.b_exporting) return;
-            this.b_exporting = true;
-            o_state.a_o_logmsg.push(
-                f_o_logmsg('Starting GIF export...', false, true, s_o_logmsg_s_type__info, Date.now(), 10000)
-            );
-            try {
-                // save composition to DB if name is set
-                if(this.s_name__composition){
-                    await this.f_save_composition();
-                }
-                let o_resp = await f_send_wsmsg_with_response(
-                    f_o_wsmsg(o_wsmsg__export_gif.s_name, {
-                        s_path_video: this.s_path_video,
-                        a_o_section: this.a_o_section,
-                        s_path_dir__export: this.s_path_dir__export,
-                        s_name__composition: this.s_name__composition || null,
-                        // export settings
-                        n_fps: this.n_fps,
-                        n_scl_x__target: this.n_scl_x__target,
-                        n_cnt__color: this.n_cnt__color,
-                        s_dither: this.s_dither,
-                        n_cnt__loop: this.n_cnt__loop,
-                        n_ratio__speed: this.n_ratio__speed,
-                        n_bytes__max: this.n_bytes__max * 1024 * 1024,
-                    })
-                );
-                if(o_resp.s_error){
-                    throw new Error(o_resp.s_error);
-                }
-                let v_result = o_resp.v_result;
-                // store result and show preview
-                let n_scl_x__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_x || 480; }));
-                let n_scl_y__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_y || 320; }));
-                if(this.n_scl_x__target > 0){
-                    let n_ratio__aspect = n_scl_y__max / n_scl_x__max;
-                    n_scl_x__max = this.n_scl_x__target;
-                    n_scl_y__max = Math.round(this.n_scl_x__target * n_ratio__aspect);
-                }
-                v_result.n_scl_x = n_scl_x__max;
-                v_result.n_scl_y = n_scl_y__max;
-                v_result.n_ms_duration = this.a_o_section.reduce(function(n, o){ return n + o.n_ms_duration; }, 0);
-                v_result.s_format = 'gif';
-                this.o_result__export = v_result;
-                this.b_preview = true;
-                let n_mb = (v_result.n_bytes / 1024 / 1024).toFixed(1);
-                let n_bytes__limit = this.n_bytes__max * 1024 * 1024;
-                let s_msg = 'GIF exported: ' + n_mb + ' MB, ' + v_result.n_fps + ' fps';
-                if(v_result.n_bytes > n_bytes__limit){
-                    s_msg += ' — WARNING: still over ' + this.n_bytes__max + ' MB limit';
-                }
-                o_state.a_o_logmsg.push(
-                    f_o_logmsg(s_msg, false, true, v_result.n_bytes > n_bytes__limit ? s_o_logmsg_s_type__error : s_o_logmsg_s_type__info, Date.now(), 15000)
-                );
-            } catch(o_err) {
-                o_state.a_o_logmsg.push(
-                    f_o_logmsg('Export failed: ' + o_err.message, false, true, s_o_logmsg_s_type__error, Date.now(), 10000)
-                );
-            }
             this.b_exporting = false;
         },
         f_on_keydown: function(o_evt) {
