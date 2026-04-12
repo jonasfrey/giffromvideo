@@ -128,7 +128,7 @@ let o_component__videocutter = {
                                 class: 'interactable o_videocutter__btn o_videocutter__btn--export',
                                 ':class': "{ disabled: a_o_section.length === 0 || b_exporting }",
                                 'v-on:click': 'f_export_gif',
-                                innerText: "{{ b_exporting ? 'Exporting...' : 'Export GIF' }}",
+                                innerText: "{{ b_exporting ? 'Exporting...' : ('Export ' + s_format.toUpperCase()) }}",
                             },
                             {
                                 s_tag: 'div',
@@ -150,6 +150,23 @@ let o_component__videocutter = {
                         'v-if': 'b_settings',
                         class: 'o_videocutter__settings',
                         a_o: [
+                            // format selector
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__settings__row',
+                                a_o: [
+                                    { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Format' },
+                                    {
+                                        s_tag: 'select',
+                                        ':value': 's_format',
+                                        'v-on:change': 's_format = $event.target.value',
+                                        a_o: [
+                                            { s_tag: 'option', value: 'gif', innerText: 'GIF' },
+                                            { s_tag: 'option', value: 'mp4', innerText: 'MP4' },
+                                        ],
+                                    },
+                                ],
+                            },
                             // presets row
                             {
                                 s_tag: 'div',
@@ -630,8 +647,18 @@ let o_component__videocutter = {
                                 a_o: [
                                     {
                                         s_tag: 'img',
+                                        'v-if': "o_result__export.s_format !== 'mp4'",
                                         ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.s_path_output) + '&t=' + Date.now()",
                                         class: 'o_videocutter__preview__gif',
+                                    },
+                                    {
+                                        s_tag: 'video',
+                                        'v-if': "o_result__export.s_format === 'mp4'",
+                                        ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.s_path_output) + '&t=' + Date.now()",
+                                        class: 'o_videocutter__preview__gif',
+                                        autoplay: true,
+                                        loop: true,
+                                        muted: true,
                                     },
                                     {
                                         s_tag: 'div',
@@ -740,6 +767,7 @@ let o_component__videocutter = {
             n_cnt__loop: 0,            // 0 = infinite
             n_ratio__speed: 1.0,
             n_bytes__max: 20,          // MB
+            s_format: 'gif',           // 'gif' or 'mp4'
             // color adjustments
             b_setting__color: false,
             n_ratio__gamma: 1.0,
@@ -797,11 +825,12 @@ let o_component__videocutter = {
                 this.s_dither = 'bayer';
                 this.n_bytes__max = 5;
             } else if(s_preset === 'whatsapp'){
-                this.n_fps = 10;
+                this.n_fps = 15;
                 this.n_scl_x__target = 480;
                 this.n_cnt__color = 256;
                 this.s_dither = 'default';
-                this.n_bytes__max = 8;
+                this.n_bytes__max = 16;
+                this.s_format = 'mp4';
             }
         },
         f_reset_color: function() {
@@ -1215,6 +1244,7 @@ let o_component__videocutter = {
                         n_cnt__loop: this.n_cnt__loop,
                         n_ratio__speed: this.n_ratio__speed,
                         n_bytes__max: this.n_bytes__max * 1024 * 1024,
+                        s_format: this.s_format,
                         // color adjustments
                         n_ratio__gamma: this.n_ratio__gamma,
                         n_ratio__contrast: this.n_ratio__contrast,
@@ -1237,11 +1267,12 @@ let o_component__videocutter = {
                 v_result.n_scl_x = n_scl_x__max;
                 v_result.n_scl_y = n_scl_y__max;
                 v_result.n_ms_duration = this.a_o_section.reduce(function(n, o){ return n + o.n_ms_duration; }, 0);
+                v_result.s_format = this.s_format;
                 this.o_result__export = v_result;
                 this.b_preview = true;
                 let n_mb = (v_result.n_bytes / 1024 / 1024).toFixed(1);
                 let n_bytes__limit = this.n_bytes__max * 1024 * 1024;
-                let s_msg = 'GIF exported: ' + n_mb + ' MB, ' + v_result.n_fps + ' fps';
+                let s_msg = this.s_format.toUpperCase() + ' exported: ' + n_mb + ' MB, ' + v_result.n_fps + ' fps';
                 if(v_result.n_bytes > n_bytes__limit){
                     s_msg += ' — WARNING: still over ' + this.n_bytes__max + ' MB limit';
                 }

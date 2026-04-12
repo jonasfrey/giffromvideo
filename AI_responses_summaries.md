@@ -10,4 +10,4 @@
 2026-04-01 23:24:10 - Increased max GIF speed slider from 4x to 8x
 2026-04-04 23:28:09 - Added drag-and-drop for timeline sections: move whole section by dragging body, resize start/end by dragging edge handles, with clamping and min-duration constraints
 2026-04-12 - Added color adjustment controls (gamma, contrast, shadows, saturation) to settings panel with FFmpeg eq filter in export pipeline
-2026-04-12 - Replaced MP4 approach with WhatsApp-compatible GIF: removed stats_mode=diff from palettegen, added Default dither option (plain paletteuse), added WhatsApp preset (10fps, 480px, 256 colors)
+2026-04-12 - Removed stats_mode=diff from palettegen, added Default dither option, added GIF/MP4 format selector, WhatsApp preset exports as MP4 (H.264, yuv420p, faststart)
