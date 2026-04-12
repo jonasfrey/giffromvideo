@@ -327,6 +327,92 @@ let o_component__videocutter = {
                                     },
                                 ],
                             },
+                            // color adjustments toggle
+                            {
+                                s_tag: 'div',
+                                class: 'interactable o_videocutter__settings__toggle',
+                                'v-on:click': 'b_setting__color = !b_setting__color',
+                                innerText: "{{ b_setting__color ? 'Hide Color' : 'Color Adjust' }}",
+                            },
+                            // color adjustment settings
+                            {
+                                s_tag: 'div',
+                                'v-if': 'b_setting__color',
+                                class: 'o_videocutter__settings__advanced',
+                                a_o: [
+                                    // gamma
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Gamma' },
+                                            {
+                                                s_tag: 'input',
+                                                type: 'range',
+                                                min: '0.2', max: '4.0', step: '0.05',
+                                                ':value': 'n_ratio__gamma',
+                                                'v-on:input': 'n_ratio__gamma = Number($event.target.value)',
+                                            },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_ratio__gamma.toFixed(2) }}' },
+                                        ],
+                                    },
+                                    // contrast
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Contrast' },
+                                            {
+                                                s_tag: 'input',
+                                                type: 'range',
+                                                min: '0.5', max: '2.0', step: '0.05',
+                                                ':value': 'n_ratio__contrast',
+                                                'v-on:input': 'n_ratio__contrast = Number($event.target.value)',
+                                            },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_ratio__contrast.toFixed(2) }}' },
+                                        ],
+                                    },
+                                    // brightness (shadows)
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Shadows' },
+                                            {
+                                                s_tag: 'input',
+                                                type: 'range',
+                                                min: '-0.5', max: '0.5', step: '0.02',
+                                                ':value': 'n_val__shadow',
+                                                'v-on:input': 'n_val__shadow = Number($event.target.value)',
+                                            },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_val__shadow.toFixed(2) }}' },
+                                        ],
+                                    },
+                                    // saturation
+                                    {
+                                        s_tag: 'div',
+                                        class: 'o_videocutter__settings__row',
+                                        a_o: [
+                                            { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Saturation' },
+                                            {
+                                                s_tag: 'input',
+                                                type: 'range',
+                                                min: '0.0', max: '3.0', step: '0.05',
+                                                ':value': 'n_ratio__saturation',
+                                                'v-on:input': 'n_ratio__saturation = Number($event.target.value)',
+                                            },
+                                            { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_ratio__saturation.toFixed(2) }}' },
+                                        ],
+                                    },
+                                    // reset button
+                                    {
+                                        s_tag: 'div',
+                                        class: 'interactable o_videocutter__btn',
+                                        'v-on:click': 'f_reset_color',
+                                        innerText: 'Reset Color',
+                                    },
+                                ],
+                            },
                         ],
                     },
                     // video player
@@ -647,6 +733,12 @@ let o_component__videocutter = {
             n_cnt__loop: 0,            // 0 = infinite
             n_ratio__speed: 1.0,
             n_bytes__max: 20,          // MB
+            // color adjustments
+            b_setting__color: false,
+            n_ratio__gamma: 1.0,
+            n_ratio__contrast: 1.0,
+            n_val__shadow: 0.0,        // brightness: -0.5 to 0.5
+            n_ratio__saturation: 1.0,
             // preview
             b_preview: false,
             o_result__export: null,    // {s_path_output, n_bytes, n_fps, n_scl_x, n_scl_y, n_ms_duration}
@@ -698,6 +790,12 @@ let o_component__videocutter = {
                 this.s_dither = 'bayer';
                 this.n_bytes__max = 5;
             }
+        },
+        f_reset_color: function() {
+            this.n_ratio__gamma = 1.0;
+            this.n_ratio__contrast = 1.0;
+            this.n_val__shadow = 0.0;
+            this.n_ratio__saturation = 1.0;
         },
         // file picker
         f_on_file_selected: async function(o_evt) {
@@ -1104,6 +1202,11 @@ let o_component__videocutter = {
                         n_cnt__loop: this.n_cnt__loop,
                         n_ratio__speed: this.n_ratio__speed,
                         n_bytes__max: this.n_bytes__max * 1024 * 1024,
+                        // color adjustments
+                        n_ratio__gamma: this.n_ratio__gamma,
+                        n_ratio__contrast: this.n_ratio__contrast,
+                        n_val__shadow: this.n_val__shadow,
+                        n_ratio__saturation: this.n_ratio__saturation,
                     })
                 );
                 if(o_resp.s_error){
