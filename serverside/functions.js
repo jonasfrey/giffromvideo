@@ -156,7 +156,7 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
     let n_fps = v_data.n_fps || 15;
     let n_scl_x__target = v_data.n_scl_x__target || 0; // 0 = original
     let n_cnt__color = v_data.n_cnt__color || 256;
-    let s_dither = v_data.s_dither || 'bayer';
+    let s_dither = v_data.s_dither || 'default';
     let n_cnt__loop = (v_data.n_cnt__loop !== undefined) ? v_data.n_cnt__loop : 0;
     let n_ratio__speed = v_data.n_ratio__speed || 1.0;
     let n_bytes__max = v_data.n_bytes__max || (20 * 1024 * 1024);
@@ -174,14 +174,11 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         s_eq = `,eq=gamma=${n_ratio__gamma}:contrast=${n_ratio__contrast}:brightness=${n_val__shadow}:saturation=${n_ratio__saturation}`;
     }
 
-    let s_format = v_data.s_format || 'gif';
-
     if(!s_path_video || !a_o_section || a_o_section.length === 0){
         throw new Error('s_path_video and a_o_section are required');
     }
 
     // determine output path: use export dir if provided, otherwise beside the video
-    let s_ext = (s_format === 'mp4') ? '.mp4' : '.gif';
     let s_path_output = v_data.s_path_output;
     if(!s_path_output){
         let s_filename = s_path_video.split(s_ds).pop().replace(/\.[^.]+$/, '');
@@ -191,9 +188,9 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         if(s_path_dir__export){
             // ensure export directory exists
             try { await Deno.mkdir(s_path_dir__export, { recursive: true }); } catch {}
-            s_path_output = s_path_dir__export + s_ds + s_filename + s_ext;
+            s_path_output = s_path_dir__export + s_ds + s_filename + '.gif';
         } else {
-            s_path_output = s_path_video.replace(/\.[^.]+$/, s_ext);
+            s_path_output = s_path_video.replace(/\.[^.]+$/, '.gif');
         }
     }
 
@@ -258,54 +255,36 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
     let n_bytes__result = 0;
     let n_fps__used = a_n_fps[0];
 
+    // dither options for paletteuse
+    let s_paletteuse = (s_dither === 'none')
+        ? 'paletteuse=dither=none'
+        : (s_dither === 'floyd_steinberg')
+            ? 'paletteuse=dither=floyd_steinberg'
+            : (s_dither === 'bayer')
+                ? 'paletteuse=dither=bayer:bayer_scale=5'
+                : 'paletteuse';
+
     for(let n_attempt = 0; n_attempt < a_n_fps.length; n_attempt++){
         let n_fps__cur = a_n_fps[n_attempt];
         n_fps__used = n_fps__cur;
 
-        let a_s_arg;
-        if(s_format === 'mp4'){
-            // MP4 export: H.264 + yuv420p, no audio, faststart for streaming
-            let s_concat = a_s_filter_scaled.join('')
-                + `concat=n=${a_o_section.length}:v=1:a=0`
-                + `,fps=${n_fps__cur}`
-                + s_scale;
-            let s_filter_complex = a_s_filter_input.join(';') + ';' + s_concat;
-            a_s_arg = [
-                '-y',
-                '-i', s_path_video,
-                '-filter_complex', s_filter_complex,
-                '-c:v', 'libx264',
-                '-preset', 'medium',
-                '-crf', '23',
-                '-pix_fmt', 'yuv420p',
-                '-movflags', '+faststart',
-                '-an',
-                s_path_output
-            ];
-        } else {
-            // GIF export: palette generation + dithering
-            let s_dither_opt = (s_dither === 'none')
-                ? 'dither=none'
-                : (s_dither === 'floyd_steinberg')
-                    ? 'dither=floyd_steinberg'
-                    : 'dither=bayer:bayer_scale=5';
-            let s_concat = a_s_filter_scaled.join('')
-                + `concat=n=${a_o_section.length}:v=1:a=0`
-                + `,fps=${n_fps__cur}`
-                + s_scale
-                + `,split[s0][s1];[s0]palettegen=max_colors=${n_cnt__color}:stats_mode=diff[p];[s1][p]paletteuse=${s_dither_opt}`;
-            let s_filter_complex = a_s_filter_input.join(';') + ';' + s_concat;
-            a_s_arg = [
-                '-y',
-                '-i', s_path_video,
-                '-filter_complex', s_filter_complex,
-                '-loop', String(n_cnt__loop),
-                '-f', 'gif',
-                s_path_output
-            ];
-        }
+        let s_concat = a_s_filter_scaled.join('')
+            + `concat=n=${a_o_section.length}:v=1:a=0`
+            + `,fps=${n_fps__cur}`
+            + s_scale
+            + `,split[s0][s1];[s0]palettegen=max_colors=${n_cnt__color}[p];[s1][p]${s_paletteuse}`;
+        let s_filter_complex = a_s_filter_input.join(';') + ';' + s_concat;
 
-        console.log(`ffmpeg attempt ${n_attempt + 1} (fps=${n_fps__cur}, format=${s_format}):`, a_s_arg.join(' '));
+        let a_s_arg = [
+            '-y',
+            '-i', s_path_video,
+            '-filter_complex', s_filter_complex,
+            '-loop', String(n_cnt__loop),
+            '-f', 'gif',
+            s_path_output
+        ];
+
+        console.log(`ffmpeg attempt ${n_attempt + 1} (fps=${n_fps__cur}):`, a_s_arg.join(' '));
 
         let o_command = new Deno.Command('ffmpeg', {
             args: a_s_arg,
@@ -325,7 +304,7 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         if(n_bytes__result <= n_bytes__max){
             break;
         }
-        console.log(`${s_format.toUpperCase()} too large: ${Math.round(n_bytes__result / 1024 / 1024)}MB > ${Math.round(n_bytes__max / 1024 / 1024)}MB, retrying with lower fps...`);
+        console.log(`GIF too large: ${Math.round(n_bytes__result / 1024 / 1024)}MB > ${Math.round(n_bytes__max / 1024 / 1024)}MB, retrying with lower fps...`);
     }
 
     return {
