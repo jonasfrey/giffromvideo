@@ -12,3 +12,4 @@
 2026-04-09 09:01:21 - Single Export button now generates both GIF and MP4 video in parallel, preview shows both results, video settings (CRF, audio) in advanced panel
 2026-04-12 - Added color adjustment controls (gamma, contrast, shadows, saturation) to settings panel with FFmpeg eq filter in export pipeline
 2026-04-15 15:00:00 - Resolved merge conflict: merged color adjustment controls into parallel GIF+Video export, added color params to shared export payload
+2026-04-15 15:05:00 - Added live preview for color adjustments via CSS filter on video element (brightness/contrast/saturate approximating ffmpeg eq)

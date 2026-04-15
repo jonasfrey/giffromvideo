@@ -462,6 +462,7 @@ let o_component__videocutter = {
                                 'v-on:ended': 'f_on_ended',
                                 'v-on:error': 'f_on_video_error',
                                 ':src': 's_url_video',
+                                ':style': '{ filter: s_style__color_filter }',
                             },
                             // crop rectangle overlay
                             {
@@ -824,6 +825,17 @@ let o_component__videocutter = {
         };
     },
     computed: {
+        s_style__color_filter: function() {
+            // CSS filter approximation of ffmpeg eq: brightness maps to gamma,
+            // brightness() to shadows, contrast() to contrast, saturate() to saturation
+            let n_brightness = 1.0 + this.n_val__shadow; // shadow -0.5..0.5 -> CSS brightness 0.5..1.5
+            let n_contrast = this.n_ratio__contrast;
+            let n_saturate = this.n_ratio__saturation;
+            // gamma: CSS has no direct gamma, approximate with brightness curve
+            // gamma > 1 brightens midtones, < 1 darkens — use pow approximation
+            let n_gamma_approx = Math.pow(n_brightness, 1.0 / this.n_ratio__gamma);
+            return 'brightness(' + n_gamma_approx.toFixed(3) + ') contrast(' + n_contrast.toFixed(3) + ') saturate(' + n_saturate.toFixed(3) + ')';
+        },
         a_o_composition: function() {
             return o_state.a_o_video_composition || [];
         },
