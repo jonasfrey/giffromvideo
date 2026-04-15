@@ -161,6 +161,19 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
     let n_ratio__speed = v_data.n_ratio__speed || 1.0;
     let n_bytes__max = v_data.n_bytes__max || (20 * 1024 * 1024);
 
+    // color adjustment settings
+    let n_ratio__gamma = v_data.n_ratio__gamma || 1.0;
+    let n_ratio__contrast = v_data.n_ratio__contrast || 1.0;
+    let n_val__shadow = (v_data.n_val__shadow !== undefined) ? v_data.n_val__shadow : 0.0;
+    let n_ratio__saturation = v_data.n_ratio__saturation || 1.0;
+
+    // build eq filter string if any color adjustments are non-default
+    let b_color_adjust = (n_ratio__gamma !== 1.0 || n_ratio__contrast !== 1.0 || n_val__shadow !== 0.0 || n_ratio__saturation !== 1.0);
+    let s_eq = '';
+    if(b_color_adjust){
+        s_eq = `,eq=gamma=${n_ratio__gamma}:contrast=${n_ratio__contrast}:brightness=${n_val__shadow}:saturation=${n_ratio__saturation}`;
+    }
+
     if(!s_path_video || !a_o_section || a_o_section.length === 0){
         throw new Error('s_path_video and a_o_section are required');
     }
@@ -210,6 +223,8 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         let s_filter = `[0:v]trim=start=${n_sec_start}:duration=${n_sec_duration},setpts=PTS-STARTPTS`;
         s_filter += `,scale=iw*sar:ih,setsar=1`;
         s_filter += `,crop=${n_scl_x}:${n_scl_y}:${n_trn_x}:${n_trn_y}`;
+        // color adjustments (gamma, contrast, shadows, saturation)
+        s_filter += s_eq;
         // speed adjustment: setpts=PTS/speed
         if(n_ratio__speed !== 1.0){
             s_filter += `,setpts=PTS/${n_ratio__speed}`;

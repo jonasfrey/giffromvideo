@@ -10,3 +10,4 @@
 2026-04-01 23:24:10 - Increased max GIF speed slider from 4x to 8x
 2026-04-04 23:28:09 - Added drag-and-drop for timeline sections: move whole section by dragging body, resize start/end by dragging edge handles, with clamping and min-duration constraints
 2026-04-09 09:01:21 - Single Export button now generates both GIF and MP4 video in parallel, preview shows both results, video settings (CRF, audio) in advanced panel
+2026-04-12 - Added color adjustment controls (gamma, contrast, shadows, saturation) to settings panel with FFmpeg eq filter in export pipeline
