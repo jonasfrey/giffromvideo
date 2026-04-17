@@ -244,6 +244,21 @@ let o_component__videocutter = {
                                     { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_ratio__speed }}x' },
                                 ],
                             },
+                            // stabilize
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__settings__row',
+                                a_o: [
+                                    { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Stabilize' },
+                                    {
+                                        s_tag: 'input',
+                                        type: 'checkbox',
+                                        ':checked': 'b_stabilize',
+                                        'v-on:change': 'b_stabilize = $event.target.checked',
+                                    },
+                                    { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ b_stabilize ? "on (slow)" : "off" }}' },
+                                ],
+                            },
                             // estimate
                             {
                                 s_tag: 'div',
@@ -772,6 +787,7 @@ let o_component__videocutter = {
             s_dither: 'default',
             n_cnt__loop: 0,            // 0 = infinite
             n_ratio__speed: 8,
+            b_stabilize: false,
             n_bytes__max: 20,          // MB
             // color adjustments
             b_setting__color: false,
@@ -1252,6 +1268,7 @@ let o_component__videocutter = {
                     n_cnt__loop: this.n_cnt__loop,
                     n_ratio__speed: this.n_ratio__speed,
                     n_bytes__max: this.n_bytes__max * 1024 * 1024,
+                    b_stabilize: this.b_stabilize,
                     // color adjustments
                     n_ratio__gamma: this.n_ratio__gamma,
                     n_ratio__contrast: this.n_ratio__contrast,

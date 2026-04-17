@@ -13,3 +13,4 @@
 2026-04-12 - Removed stats_mode=diff from palettegen, added Default dither option, WhatsApp preset
 2026-04-17 - Export now generates both GIF and MP4 in parallel, preview shows both file sizes and paths, MP4 video preview with autoplay/loop/muted
 2026-04-17 - Added playback speed slider (0.1x-3x) to video controls for finding loops
+2026-04-17 - Added Stabilize checkbox: two-pass vidstabdetect/vidstabtransform pipeline for shake reduction

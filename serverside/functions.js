@@ -175,6 +175,7 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
     }
 
     let s_format = v_data.s_format || 'gif';
+    let b_stabilize = v_data.b_stabilize === true;
 
     if(!s_path_video || !a_o_section || a_o_section.length === 0){
         throw new Error('s_path_video and a_o_section are required');
@@ -281,6 +282,47 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
                 ? 'paletteuse=dither=bayer:bayer_scale=5'
                 : 'paletteuse';
 
+    // stabilization pass 1: run vidstabdetect on the concat'd (pre-color, pre-speed) clip
+    let s_stabilize = '';
+    let s_path__trf = null;
+    if(b_stabilize){
+        s_path__trf = `/tmp/vidstab_${Date.now()}_${Math.random().toString(36).slice(2)}.trf`;
+        let a_s_filter__p1 = [];
+        let a_s_filter_scaled__p1 = [];
+        for(let n_idx = 0; n_idx < a_o_section.length; n_idx++){
+            let o_section = a_o_section[n_idx];
+            let n_sec_start = o_section.n_ms_start / 1000;
+            let n_sec_duration = o_section.n_ms_duration / 1000;
+            let n_scl_x = o_section.n_scl_x || n_scl_x__output;
+            let n_scl_y = o_section.n_scl_y || n_scl_y__output;
+            let n_trn_x = o_section.n_trn_x || 0;
+            let n_trn_y = o_section.n_trn_y || 0;
+            let s = `[0:v]trim=start=${n_sec_start}:duration=${n_sec_duration},setpts=PTS-STARTPTS`;
+            s += `,scale=iw*sar:ih,setsar=1`;
+            s += `,crop=${n_scl_x}:${n_scl_y}:${n_trn_x}:${n_trn_y}`;
+            if(n_scl_x !== n_scl_x__output || n_scl_y !== n_scl_y__output){
+                let n_pad_x = Math.floor((n_scl_x__output - n_scl_x) / 2);
+                let n_pad_y = Math.floor((n_scl_y__output - n_scl_y) / 2);
+                s += `,pad=${n_scl_x__output}:${n_scl_y__output}:${n_pad_x}:${n_pad_y}:black`;
+            }
+            s += `[p${n_idx}]`;
+            a_s_filter__p1.push(s);
+            a_s_filter_scaled__p1.push(`[p${n_idx}]`);
+        }
+        let s_filter__p1 = a_s_filter__p1.join(';') + ';'
+            + a_s_filter_scaled__p1.join('')
+            + `concat=n=${a_o_section.length}:v=1:a=0`
+            + `,vidstabdetect=result=${s_path__trf}:shakiness=5:accuracy=15`;
+        let a_s_arg__p1 = ['-y', '-i', s_path_video, '-filter_complex', s_filter__p1, '-f', 'null', '-'];
+        console.log('ffmpeg vidstabdetect pass:', a_s_arg__p1.join(' '));
+        let o_cmd__p1 = new Deno.Command('ffmpeg', { args: a_s_arg__p1, stdout: 'piped', stderr: 'piped' });
+        let o_proc__p1 = await o_cmd__p1.output();
+        if(!o_proc__p1.success){
+            throw new Error('vidstabdetect failed: ' + new TextDecoder().decode(o_proc__p1.stderr));
+        }
+        s_stabilize = `,vidstabtransform=input=${s_path__trf}:smoothing=10:crop=black`;
+    }
+
     for(let n_attempt = 0; n_attempt < a_n_fps.length; n_attempt++){
         let n_fps__cur = a_n_fps[n_attempt];
         n_fps__used = n_fps__cur;
@@ -289,6 +331,7 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         if(s_format === 'mp4'){
             let s_concat = a_s_filter_scaled.join('')
                 + `concat=n=${a_o_section.length}:v=1:a=0`
+                + s_stabilize
                 + `,fps=${n_fps__cur}`
                 + (s_scale__mp4 || s_scale);
             let s_filter_complex = a_s_filter_input.join(';') + ';' + s_concat;
@@ -307,6 +350,7 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         } else {
             let s_concat = a_s_filter_scaled.join('')
                 + `concat=n=${a_o_section.length}:v=1:a=0`
+                + s_stabilize
                 + `,fps=${n_fps__cur}`
                 + s_scale
                 + `,split[s0][s1];[s0]palettegen=max_colors=${n_cnt__color}[p];[s1][p]${s_paletteuse}`;
@@ -342,6 +386,11 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
             break;
         }
         console.log(`${s_format.toUpperCase()} too large: ${Math.round(n_bytes__result / 1024 / 1024)}MB > ${Math.round(n_bytes__max / 1024 / 1024)}MB, retrying with lower fps...`);
+    }
+
+    // clean up vidstab transforms file
+    if(s_path__trf){
+        try { await Deno.remove(s_path__trf); } catch {}
     }
 
     return {
