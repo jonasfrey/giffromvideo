@@ -634,6 +634,15 @@ let o_component__videocutter = {
                                         class: 'o_videocutter__preview__gif',
                                     },
                                     {
+                                        s_tag: 'video',
+                                        'v-if': 'o_result__export.o_result__mp4',
+                                        ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.o_result__mp4.s_path_output) + '&t=' + Date.now()",
+                                        class: 'o_videocutter__preview__gif',
+                                        autoplay: true,
+                                        loop: true,
+                                        muted: true,
+                                    },
+                                    {
                                         s_tag: 'div',
                                         class: 'o_videocutter__preview__meta',
                                         a_o: [
