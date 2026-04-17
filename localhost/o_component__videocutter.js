@@ -766,12 +766,12 @@ let o_component__videocutter = {
             // export settings
             b_settings: false,
             b_setting__advanced: false,
-            n_fps: 15,
-            n_scl_x__target: 0,       // 0 = original size
+            n_fps: 10,
+            n_scl_x__target: 800,
             n_cnt__color: 256,
             s_dither: 'default',
             n_cnt__loop: 0,            // 0 = infinite
-            n_ratio__speed: 1.0,
+            n_ratio__speed: 8,
             n_bytes__max: 20,          // MB
             // color adjustments
             b_setting__color: false,
