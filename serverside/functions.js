@@ -195,6 +195,18 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
         } else {
             s_path_output = s_path_video.replace(/\.[^.]+$/, s_ext);
         }
+        // avoid overwriting: append _1, _2, ... if file exists
+        let s_path_base = s_path_output.replace(/\.[^.]+$/, '');
+        let n_cnt = 1;
+        while(true){
+            try {
+                await Deno.stat(s_path_output);
+                s_path_output = s_path_base + '_' + n_cnt + s_ext;
+                n_cnt++;
+            } catch {
+                break;
+            }
+        }
     }
 
     // build ffmpeg filter_complex: trim each section, crop, pad centered on max canvas, concat
