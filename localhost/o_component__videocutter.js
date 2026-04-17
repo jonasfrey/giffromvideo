@@ -128,7 +128,7 @@ let o_component__videocutter = {
                                 class: 'interactable o_videocutter__btn o_videocutter__btn--export',
                                 ':class': "{ disabled: a_o_section.length === 0 || b_exporting }",
                                 'v-on:click': 'f_export_gif',
-                                innerText: "{{ b_exporting ? 'Exporting...' : ('Export ' + s_format.toUpperCase()) }}",
+                                innerText: "{{ b_exporting ? 'Exporting...' : 'Export GIF + MP4' }}",
                             },
                             {
                                 s_tag: 'div',
@@ -150,23 +150,6 @@ let o_component__videocutter = {
                         'v-if': 'b_settings',
                         class: 'o_videocutter__settings',
                         a_o: [
-                            // format selector
-                            {
-                                s_tag: 'div',
-                                class: 'o_videocutter__settings__row',
-                                a_o: [
-                                    { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Format' },
-                                    {
-                                        s_tag: 'select',
-                                        ':value': 's_format',
-                                        'v-on:change': 's_format = $event.target.value',
-                                        a_o: [
-                                            { s_tag: 'option', value: 'gif', innerText: 'GIF' },
-                                            { s_tag: 'option', value: 'mp4', innerText: 'MP4' },
-                                        ],
-                                    },
-                                ],
-                            },
                             // presets row
                             {
                                 s_tag: 'div',
@@ -647,18 +630,8 @@ let o_component__videocutter = {
                                 a_o: [
                                     {
                                         s_tag: 'img',
-                                        'v-if': "o_result__export.s_format !== 'mp4'",
                                         ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.s_path_output) + '&t=' + Date.now()",
                                         class: 'o_videocutter__preview__gif',
-                                    },
-                                    {
-                                        s_tag: 'video',
-                                        'v-if': "o_result__export.s_format === 'mp4'",
-                                        ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.s_path_output) + '&t=' + Date.now()",
-                                        class: 'o_videocutter__preview__gif',
-                                        autoplay: true,
-                                        loop: true,
-                                        muted: true,
                                     },
                                     {
                                         s_tag: 'div',
@@ -668,8 +641,17 @@ let o_component__videocutter = {
                                                 s_tag: 'div',
                                                 class: 'o_videocutter__preview__meta__row',
                                                 a_o: [
-                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Size' },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'GIF' },
                                                     { s_tag: 'div', innerText: "{{ (o_result__export.n_bytes / 1024 / 1024).toFixed(2) + ' MB' }}" },
+                                                ],
+                                            },
+                                            {
+                                                s_tag: 'div',
+                                                'v-if': 'o_result__export.o_result__mp4',
+                                                class: 'o_videocutter__preview__meta__row',
+                                                a_o: [
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'MP4' },
+                                                    { s_tag: 'div', innerText: "{{ (o_result__export.o_result__mp4.n_bytes / 1024 / 1024).toFixed(2) + ' MB' }}" },
                                                 ],
                                             },
                                             {
@@ -692,16 +674,17 @@ let o_component__videocutter = {
                                                 s_tag: 'div',
                                                 class: 'o_videocutter__preview__meta__row',
                                                 a_o: [
-                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Duration' },
-                                                    { s_tag: 'div', innerText: '{{ f_s_time(o_result__export.n_ms_duration) }}' },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'GIF path' },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__path', innerText: '{{ o_result__export.s_path_output }}' },
                                                 ],
                                             },
                                             {
                                                 s_tag: 'div',
+                                                'v-if': 'o_result__export.o_result__mp4',
                                                 class: 'o_videocutter__preview__meta__row',
                                                 a_o: [
-                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Path' },
-                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__path', innerText: '{{ o_result__export.s_path_output }}' },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'MP4 path' },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__path', innerText: '{{ o_result__export.o_result__mp4.s_path_output }}' },
                                                 ],
                                             },
                                         ],
@@ -767,7 +750,6 @@ let o_component__videocutter = {
             n_cnt__loop: 0,            // 0 = infinite
             n_ratio__speed: 1.0,
             n_bytes__max: 20,          // MB
-            s_format: 'gif',           // 'gif' or 'mp4'
             // color adjustments
             b_setting__color: false,
             n_ratio__gamma: 1.0,
@@ -830,7 +812,6 @@ let o_component__videocutter = {
                 this.n_cnt__color = 256;
                 this.s_dither = 'default';
                 this.n_bytes__max = 16;
-                this.s_format = 'mp4';
             }
         },
         f_reset_color: function() {
@@ -1223,39 +1204,43 @@ let o_component__videocutter = {
             if(this.a_o_section.length === 0 || this.b_exporting) return;
             this.b_exporting = true;
             o_state.a_o_logmsg.push(
-                f_o_logmsg('Starting GIF export...', false, true, s_o_logmsg_s_type__info, Date.now(), 10000)
+                f_o_logmsg('Starting GIF + MP4 export...', false, true, s_o_logmsg_s_type__info, Date.now(), 10000)
             );
             try {
                 // save composition to DB if name is set
                 if(this.s_name__composition){
                     await this.f_save_composition();
                 }
-                let o_resp = await f_send_wsmsg_with_response(
-                    f_o_wsmsg(o_wsmsg__export_gif.s_name, {
-                        s_path_video: this.s_path_video,
-                        a_o_section: this.a_o_section,
-                        s_path_dir__export: this.s_path_dir__export,
-                        s_name__composition: this.s_name__composition || null,
-                        // export settings
-                        n_fps: this.n_fps,
-                        n_scl_x__target: this.n_scl_x__target,
-                        n_cnt__color: this.n_cnt__color,
-                        s_dither: this.s_dither,
-                        n_cnt__loop: this.n_cnt__loop,
-                        n_ratio__speed: this.n_ratio__speed,
-                        n_bytes__max: this.n_bytes__max * 1024 * 1024,
-                        s_format: this.s_format,
-                        // color adjustments
-                        n_ratio__gamma: this.n_ratio__gamma,
-                        n_ratio__contrast: this.n_ratio__contrast,
-                        n_val__shadow: this.n_val__shadow,
-                        n_ratio__saturation: this.n_ratio__saturation,
-                    })
-                );
-                if(o_resp.s_error){
-                    throw new Error(o_resp.s_error);
-                }
-                let v_result = o_resp.v_result;
+                let o_export_data = {
+                    s_path_video: this.s_path_video,
+                    a_o_section: this.a_o_section,
+                    s_path_dir__export: this.s_path_dir__export,
+                    s_name__composition: this.s_name__composition || null,
+                    // export settings
+                    n_fps: this.n_fps,
+                    n_scl_x__target: this.n_scl_x__target,
+                    n_cnt__color: this.n_cnt__color,
+                    s_dither: this.s_dither,
+                    n_cnt__loop: this.n_cnt__loop,
+                    n_ratio__speed: this.n_ratio__speed,
+                    n_bytes__max: this.n_bytes__max * 1024 * 1024,
+                    // color adjustments
+                    n_ratio__gamma: this.n_ratio__gamma,
+                    n_ratio__contrast: this.n_ratio__contrast,
+                    n_val__shadow: this.n_val__shadow,
+                    n_ratio__saturation: this.n_ratio__saturation,
+                };
+                // export GIF and MP4 in parallel
+                let o_data__gif = Object.assign({}, o_export_data, { s_format: 'gif' });
+                let o_data__mp4 = Object.assign({}, o_export_data, { s_format: 'mp4' });
+                let [o_resp__gif, o_resp__mp4] = await Promise.all([
+                    f_send_wsmsg_with_response(f_o_wsmsg(o_wsmsg__export_gif.s_name, o_data__gif)),
+                    f_send_wsmsg_with_response(f_o_wsmsg(o_wsmsg__export_gif.s_name, o_data__mp4)),
+                ]);
+                if(o_resp__gif.s_error) throw new Error('GIF: ' + o_resp__gif.s_error);
+                if(o_resp__mp4.s_error) throw new Error('MP4: ' + o_resp__mp4.s_error);
+                let v_result__gif = o_resp__gif.v_result;
+                let v_result__mp4 = o_resp__mp4.v_result;
                 // store result and show preview
                 let n_scl_x__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_x || 480; }));
                 let n_scl_y__max = Math.max.apply(null, this.a_o_section.map(function(o){ return o.n_scl_y || 320; }));
@@ -1264,20 +1249,17 @@ let o_component__videocutter = {
                     n_scl_x__max = this.n_scl_x__target;
                     n_scl_y__max = Math.round(this.n_scl_x__target * n_ratio__aspect);
                 }
-                v_result.n_scl_x = n_scl_x__max;
-                v_result.n_scl_y = n_scl_y__max;
-                v_result.n_ms_duration = this.a_o_section.reduce(function(n, o){ return n + o.n_ms_duration; }, 0);
-                v_result.s_format = this.s_format;
-                this.o_result__export = v_result;
+                v_result__gif.n_scl_x = n_scl_x__max;
+                v_result__gif.n_scl_y = n_scl_y__max;
+                v_result__gif.n_ms_duration = this.a_o_section.reduce(function(n, o){ return n + o.n_ms_duration; }, 0);
+                v_result__gif.o_result__mp4 = v_result__mp4;
+                this.o_result__export = v_result__gif;
                 this.b_preview = true;
-                let n_mb = (v_result.n_bytes / 1024 / 1024).toFixed(1);
-                let n_bytes__limit = this.n_bytes__max * 1024 * 1024;
-                let s_msg = this.s_format.toUpperCase() + ' exported: ' + n_mb + ' MB, ' + v_result.n_fps + ' fps';
-                if(v_result.n_bytes > n_bytes__limit){
-                    s_msg += ' — WARNING: still over ' + this.n_bytes__max + ' MB limit';
-                }
+                let n_mb__gif = (v_result__gif.n_bytes / 1024 / 1024).toFixed(1);
+                let n_mb__mp4 = (v_result__mp4.n_bytes / 1024 / 1024).toFixed(1);
+                let s_msg = 'Exported: GIF ' + n_mb__gif + ' MB + MP4 ' + n_mb__mp4 + ' MB, ' + v_result__gif.n_fps + ' fps';
                 o_state.a_o_logmsg.push(
-                    f_o_logmsg(s_msg, false, true, v_result.n_bytes > n_bytes__limit ? s_o_logmsg_s_type__error : s_o_logmsg_s_type__info, Date.now(), 15000)
+                    f_o_logmsg(s_msg, false, true, s_o_logmsg_s_type__info, Date.now(), 15000)
                 );
             } catch(o_err) {
                 o_state.a_o_logmsg.push(
