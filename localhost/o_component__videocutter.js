@@ -475,6 +475,19 @@ let o_component__videocutter = {
                                 class: 'o_videocutter__hint',
                                 innerText: "Press 'S' to mark cut start/end",
                             },
+                            {
+                                s_tag: 'input',
+                                type: 'range',
+                                class: 'o_videocutter__speed_slider',
+                                min: '0.1', max: '3', step: '0.1',
+                                ':value': 'n_ratio__playback',
+                                'v-on:input': 'f_set_playback_rate(Number($event.target.value))',
+                            },
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__speed_label',
+                                innerText: '{{ n_ratio__playback.toFixed(1) }}x',
+                            },
                         ],
                     },
                     // timeline
@@ -731,6 +744,7 @@ let o_component__videocutter = {
             n_scl_x__video: 0,
             n_scl_y__video: 0,
             b_playing: false,
+            n_ratio__playback: 1.0,    // preview playback speed
             b_exporting: false,
             a_o_section: [],
             o_section__pending: null, // {n_ms_start} - waiting for end
@@ -822,6 +836,11 @@ let o_component__videocutter = {
                 this.s_dither = 'default';
                 this.n_bytes__max = 16;
             }
+        },
+        f_set_playback_rate: function(n_rate) {
+            this.n_ratio__playback = n_rate;
+            let el_video = this.$refs.el_video;
+            if(el_video) el_video.playbackRate = n_rate;
         },
         f_reset_color: function() {
             this.n_ratio__gamma = 1.0;
