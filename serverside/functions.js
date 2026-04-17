@@ -245,8 +245,10 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
 
     // scale filter (after concat)
     let s_scale = '';
+    let s_scale__mp4 = '';
     if(n_scl_x__target > 0){
         s_scale = `,scale=${n_scl_x__target}:-1:flags=lanczos`;
+        s_scale__mp4 = `,scale=${n_scl_x__target}:-2:flags=lanczos`;
     }
 
     // build fallback fps chain from requested fps down to 4
@@ -276,7 +278,7 @@ o_wsmsg__export_gif.f_v_server_implementation = async function(o_wsmsg){
             let s_concat = a_s_filter_scaled.join('')
                 + `concat=n=${a_o_section.length}:v=1:a=0`
                 + `,fps=${n_fps__cur}`
-                + s_scale;
+                + (s_scale__mp4 || s_scale);
             let s_filter_complex = a_s_filter_input.join(';') + ';' + s_concat;
             a_s_arg = [
                 '-y',
