@@ -184,6 +184,12 @@ let o_component__videocutter = {
                                                 'v-on:click': 'f_apply_preset("small")',
                                                 innerText: 'Small File',
                                             },
+                                            {
+                                                s_tag: 'div',
+                                                class: 'interactable o_videocutter__btn',
+                                                'v-on:click': 'f_apply_preset("whatsapp")',
+                                                innerText: 'WhatsApp',
+                                            },
                                         ],
                                     },
                                 ],
@@ -240,6 +246,21 @@ let o_component__videocutter = {
                                     { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ n_ratio__speed }}x' },
                                 ],
                             },
+                            // stabilize
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__settings__row',
+                                a_o: [
+                                    { s_tag: 'div', class: 'o_videocutter__settings__label', innerText: 'Stabilize' },
+                                    {
+                                        s_tag: 'input',
+                                        type: 'checkbox',
+                                        ':checked': 'b_stabilize',
+                                        'v-on:change': 'b_stabilize = $event.target.checked',
+                                    },
+                                    { s_tag: 'div', class: 'o_videocutter__settings__val', innerText: '{{ b_stabilize ? "on (slow)" : "off" }}' },
+                                ],
+                            },
                             // estimate
                             {
                                 s_tag: 'div',
@@ -286,7 +307,8 @@ let o_component__videocutter = {
                                                 ':value': 's_dither',
                                                 'v-on:change': 's_dither = $event.target.value',
                                                 a_o: [
-                                                    { s_tag: 'option', value: 'bayer', innerText: 'Bayer (default)' },
+                                                    { s_tag: 'option', value: 'default', innerText: 'Default' },
+                                                    { s_tag: 'option', value: 'bayer', innerText: 'Bayer' },
                                                     { s_tag: 'option', value: 'floyd_steinberg', innerText: 'Floyd-Steinberg' },
                                                     { s_tag: 'option', value: 'none', innerText: 'None' },
                                                 ],
@@ -502,6 +524,19 @@ let o_component__videocutter = {
                                 class: 'o_videocutter__hint',
                                 innerText: "Press 'S' to mark cut start/end",
                             },
+                            {
+                                s_tag: 'input',
+                                type: 'range',
+                                class: 'o_videocutter__speed_slider',
+                                min: '0.1', max: '3', step: '0.1',
+                                ':value': 'n_ratio__playback',
+                                'v-on:input': 'f_set_playback_rate(Number($event.target.value))',
+                            },
+                            {
+                                s_tag: 'div',
+                                class: 'o_videocutter__speed_label',
+                                innerText: '{{ n_ratio__playback.toFixed(1) }}x',
+                            },
                         ],
                     },
                     // timeline
@@ -668,6 +703,15 @@ let o_component__videocutter = {
                                         class: 'o_videocutter__preview__gif',
                                     },
                                     {
+                                        s_tag: 'video',
+                                        'v-if': 'o_result__export.o_result__mp4',
+                                        ':src': "'/api/file?path=' + encodeURIComponent(o_result__export.o_result__mp4.s_path_output) + '&t=' + Date.now()",
+                                        class: 'o_videocutter__preview__gif',
+                                        autoplay: true,
+                                        loop: true,
+                                        muted: true,
+                                    },
+                                    {
                                         s_tag: 'div',
                                         class: 'o_videocutter__preview__meta',
                                         a_o: [
@@ -675,8 +719,17 @@ let o_component__videocutter = {
                                                 s_tag: 'div',
                                                 class: 'o_videocutter__preview__meta__row',
                                                 a_o: [
-                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'Size' },
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'GIF' },
                                                     { s_tag: 'div', innerText: "{{ (o_result__export.n_bytes / 1024 / 1024).toFixed(2) + ' MB' }}" },
+                                                ],
+                                            },
+                                            {
+                                                s_tag: 'div',
+                                                'v-if': 'o_result__export.o_result__mp4',
+                                                class: 'o_videocutter__preview__meta__row',
+                                                a_o: [
+                                                    { s_tag: 'div', class: 'o_videocutter__preview__meta__label', innerText: 'MP4' },
+                                                    { s_tag: 'div', innerText: "{{ (o_result__export.o_result__mp4.n_bytes / 1024 / 1024).toFixed(2) + ' MB' }}" },
                                                 ],
                                             },
                                             {
@@ -781,6 +834,7 @@ let o_component__videocutter = {
             n_scl_x__video: 0,
             n_scl_y__video: 0,
             b_playing: false,
+            n_ratio__playback: 1.0,    // preview playback speed
             b_exporting: false,
             a_o_section: [],
             o_section__pending: null, // {n_ms_start} - waiting for end
@@ -802,12 +856,13 @@ let o_component__videocutter = {
             // export settings
             b_settings: false,
             b_setting__advanced: false,
-            n_fps: 15,
-            n_scl_x__target: 0,       // 0 = original size
+            n_fps: 10,
+            n_scl_x__target: 800,
             n_cnt__color: 256,
-            s_dither: 'bayer',
+            s_dither: 'default',
             n_cnt__loop: 0,            // 0 = infinite
-            n_ratio__speed: 1.0,
+            n_ratio__speed: 8,
+            b_stabilize: false,
             n_bytes__max: 20,          // MB
             // video-specific settings
             n_crf: 23,
@@ -880,7 +935,18 @@ let o_component__videocutter = {
                 this.n_cnt__color = 128;
                 this.s_dither = 'bayer';
                 this.n_bytes__max = 5;
+            } else if(s_preset === 'whatsapp'){
+                this.n_fps = 15;
+                this.n_scl_x__target = 480;
+                this.n_cnt__color = 256;
+                this.s_dither = 'default';
+                this.n_bytes__max = 16;
             }
+        },
+        f_set_playback_rate: function(n_rate) {
+            this.n_ratio__playback = n_rate;
+            let el_video = this.$refs.el_video;
+            if(el_video) el_video.playbackRate = n_rate;
         },
         f_reset_color: function() {
             this.n_ratio__gamma = 1.0;
@@ -1287,6 +1353,7 @@ let o_component__videocutter = {
                 n_fps: this.n_fps,
                 n_scl_x__target: this.n_scl_x__target,
                 n_ratio__speed: this.n_ratio__speed,
+                b_stabilize: this.b_stabilize,
                 // color adjustments
                 n_ratio__gamma: this.n_ratio__gamma,
                 n_ratio__contrast: this.n_ratio__contrast,

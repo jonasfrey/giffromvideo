@@ -11,5 +11,10 @@
 2026-04-04 23:28:09 - Added drag-and-drop for timeline sections: move whole section by dragging body, resize start/end by dragging edge handles, with clamping and min-duration constraints
 2026-04-09 09:01:21 - Single Export button now generates both GIF and MP4 video in parallel, preview shows both results, video settings (CRF, audio) in advanced panel
 2026-04-12 - Added color adjustment controls (gamma, contrast, shadows, saturation) to settings panel with FFmpeg eq filter in export pipeline
+2026-04-12 - Removed stats_mode=diff from palettegen, added Default dither option, WhatsApp preset
 2026-04-15 15:00:00 - Resolved merge conflict: merged color adjustment controls into parallel GIF+Video export, added color params to shared export payload
 2026-04-15 15:05:00 - Added live preview for color adjustments via CSS filter on video element (brightness/contrast/saturate approximating ffmpeg eq)
+2026-04-17 - Export now generates both GIF and MP4 in parallel, preview shows both file sizes and paths, MP4 video preview with autoplay/loop/muted
+2026-04-17 - Added playback speed slider (0.1x-3x) to video controls for finding loops
+2026-04-17 - Added Stabilize checkbox: two-pass vidstabdetect/vidstabtransform pipeline for shake reduction
+2026-04-18 - Resolved git pull merge conflicts: kept HEAD parallel-export architecture (f_export with Promise.allSettled, separate GIF/video results), wired b_stabilize into video export payload
